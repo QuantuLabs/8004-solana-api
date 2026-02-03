@@ -1,11 +1,36 @@
-# Registries API
+# Sub-Registries API
 
-List agent registries (collections).
+List sub-registries (Metaplex collections) that form the unified Agent Registry.
+
+## Architecture
+
+The 8004 Agent Registry uses a **sharded architecture** where the global registry is split into multiple **sub-registries**, each represented as a Metaplex Core collection:
+
+```
+┌─────────────────────────────────────────────────────┐
+│              8004 Agent Registry Program            │
+│                                                     │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
+│  │ BASE        │  │ USER #1     │  │ USER #2     │ │
+│  │ Collection  │  │ Collection  │  │ Collection  │ │
+│  │ (default)   │  │ (custom)    │  │ (custom)    │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘ │
+│        │                │                │         │
+│        └────────────────┼────────────────┘         │
+│                         ▼                          │
+│              Unified Agent Registry                │
+└─────────────────────────────────────────────────────┘
+```
+
+- **BASE**: Default sub-registry created during program initialization
+- **USER**: Custom sub-registries created by users
+
+All sub-registries belong to the same on-chain program and form a single logical registry.
 
 ## Endpoint
 
 ```
-GET /rest/v1/registries
+GET /rest/v1/collections
 ```
 
 ## Query Parameters
@@ -13,6 +38,8 @@ GET /rest/v1/registries
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `collection` | string | Filter by collection address |
+| `registry_type` | string | Filter by type: `BASE` or `USER` |
+| `authority` | string | Filter by authority wallet |
 | `status` | string | Verification status filter |
 | `limit` | number | Max results (default: 100) |
 | `offset` | number | Pagination offset |
@@ -20,42 +47,43 @@ GET /rest/v1/registries
 ## Response Schema
 
 ```typescript
-interface Registry {
-  id: string;                 // Collection pubkey
-  collection: string;         // Collection pubkey (same as id)
-  registryType: string;       // "BASE" or "USER"
-  authority: string | null;   // Registry authority wallet
-  slot: string | null;        // Creation slot (BigInt as string)
-  txSignature: string | null; // Creation transaction
+interface SubRegistry {
+  collection: string;         // Metaplex collection pubkey (primary key)
+  registry_type: string;      // "BASE" or "USER"
+  authority: string | null;   // Sub-registry authority wallet
+  created_at: string;         // ISO timestamp
   status: string;             // PENDING | FINALIZED | ORPHANED
   verified_at: string | null; // When verified
-  createdAt: string;          // ISO timestamp
-  updatedAt: string;          // ISO timestamp
 }
 ```
 
-## Registry Types
+## Sub-Registry Types
 
 | Type | Description |
 |------|-------------|
-| `BASE` | The main registry created during program initialization |
-| `USER` | User-created custom registries |
+| `BASE` | Default sub-registry created during program initialization |
+| `USER` | Custom sub-registries created by users |
 
 ## Examples
 
-### List all registries
+### List all sub-registries
 ```bash
-curl "https://api.example.com/rest/v1/registries"
+curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/collections"
 ```
 
-### Get specific registry
+### Get the BASE sub-registry
 ```bash
-curl "https://api.example.com/rest/v1/registries?collection=eq.CollectionPubkey"
+curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/collections?registry_type=eq.BASE"
 ```
 
-### Only finalized registries
+### Get USER sub-registries only
 ```bash
-curl "https://api.example.com/rest/v1/registries?status=eq.FINALIZED"
+curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/collections?registry_type=eq.USER"
+```
+
+### Get sub-registries by authority
+```bash
+curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/collections?authority=eq.WalletPubkey"
 ```
 
 ## Response Example
@@ -63,28 +91,21 @@ curl "https://api.example.com/rest/v1/registries?status=eq.FINALIZED"
 ```json
 [
   {
-    "id": "9KmLpQwR5tYz...",
     "collection": "9KmLpQwR5tYz...",
-    "registryType": "BASE",
+    "registry_type": "BASE",
     "authority": "5FHwkrdxntdK4N6Z4gXQ...",
-    "slot": "123450000",
-    "txSignature": "3Xy4wZ...",
+    "created_at": "2024-01-10T00:00:00.000Z",
     "status": "FINALIZED",
-    "verified_at": "2024-01-10T00:00:00.000Z",
-    "createdAt": "2024-01-10T00:00:00.000Z",
-    "updatedAt": "2024-01-10T00:00:00.000Z"
+    "verified_at": "2024-01-10T00:00:00.000Z"
   },
   {
-    "id": "7YmP3kL2nQwR...",
     "collection": "7YmP3kL2nQwR...",
-    "registryType": "USER",
+    "registry_type": "USER",
     "authority": "8Rz4NqkPsXdV...",
-    "slot": "123455000",
-    "txSignature": "4Yz5xA...",
+    "created_at": "2024-01-12T00:00:00.000Z",
     "status": "FINALIZED",
-    "verified_at": "2024-01-12T00:00:00.000Z",
-    "createdAt": "2024-01-12T00:00:00.000Z",
-    "updatedAt": "2024-01-12T00:00:00.000Z"
+    "verified_at": "2024-01-12T00:00:00.000Z"
   }
 ]
 ```
+

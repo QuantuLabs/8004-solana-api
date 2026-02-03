@@ -1,9 +1,34 @@
-# 8004 Solana Graph API
+# 8004 Solana API
 
 REST API for querying the 8004 Agent Registry on Solana. Compatible with PostgREST/Supabase query format.
 
 > **Self-Hosted**: Run your own indexer instance.
 > See [8004-solana-indexer](https://github.com/QuantuLabs/8004-solana-indexer) for setup instructions.
+
+## Architecture
+
+The 8004 Agent Registry uses a **sharded architecture** where the global registry is composed of multiple **sub-registries**, each represented as a Metaplex Core collection:
+
+```
+┌─────────────────────────────────────────────────────┐
+│              8004 Agent Registry Program            │
+│                                                     │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
+│  │ BASE        │  │ USER #1     │  │ USER #2     │ │
+│  │ Collection  │  │ Collection  │  │ Collection  │ │
+│  │ (default)   │  │ (custom)    │  │ (custom)    │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘ │
+│        │                │                │         │
+│        └────────────────┼────────────────┘         │
+│                         ▼                          │
+│              Unified Agent Registry                │
+└─────────────────────────────────────────────────────┘
+```
+
+- **BASE**: Default sub-registry created during program initialization
+- **USER**: Custom sub-registries created by users for organizing agents
+
+All sub-registries belong to the same on-chain program and form a single logical registry.
 
 ## Base URL
 
@@ -73,13 +98,14 @@ All data has a verification status:
 |----------|-------------|---------------|
 | [`/agents`](docs/agents.md) | List registered agents | [View](docs/agents.md) |
 | [`/feedbacks`](docs/feedbacks.md) | List feedback events | [View](docs/feedbacks.md) |
-| [`/responses`](docs/responses.md) | List feedback responses | [View](docs/responses.md) |
-| [`/revocations`](docs/revocations.md) | List revoked feedbacks | [View](docs/revocations.md) |
+| [`/feedback_responses`](docs/responses.md) | List feedback responses | [View](docs/responses.md) |
 | [`/validations`](docs/validations.md) | List validation requests | [View](docs/validations.md) |
-| [`/registries`](docs/registries.md) | List collections/registries | [View](docs/registries.md) |
+| [`/collections`](docs/registries.md) | List sub-registries | [View](docs/registries.md) |
 | [`/metadata`](docs/metadata.md) | Agent metadata key-value pairs | [View](docs/metadata.md) |
-| [`/leaderboard`](docs/leaderboard.md) | Top agents by trust score | [View](docs/leaderboard.md) |
-| [`/stats`](docs/stats.md) | Global & collection statistics | [View](docs/stats.md) |
+| [`/leaderboard`](docs/leaderboard.md) | Top agents by [ATOM](https://github.com/QuantuLabs/8004-solana/blob/main/programs/atom-engine/README.md) trust score | [View](docs/leaderboard.md) |
+| [`/global_stats`](docs/stats.md) | Global statistics | [View](docs/stats.md) |
+| [`/collection_stats`](docs/stats.md) | Per-collection statistics | [View](docs/stats.md) |
+| [`/verification_stats`](docs/stats.md) | Verification status breakdown | [View](docs/stats.md) |
 
 ## Quick Examples
 

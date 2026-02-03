@@ -41,12 +41,12 @@ interface Feedback {
   endpoint: string;              // Service endpoint URL
   feedback_uri: string | null;   // Extended feedback metadata URI
   feedback_hash: string | null;  // SHA-256 of feedback content (hex)
-  running_digest: string | null; // Hash-chain digest (hex)
   is_revoked: boolean;           // Has been revoked
   revoked_at: string | null;     // When revoked (ISO timestamp)
   status: string;                // PENDING | FINALIZED | ORPHANED
   verified_at: string | null;    // When verified
-  block_slot: number;            // Solana slot
+  block_slot: string;            // Solana slot (BigInt as string)
+  tx_index: number | null;       // Transaction index for ordering
   tx_signature: string;          // Transaction signature
   created_at: string;            // ISO timestamp
 }
@@ -102,12 +102,12 @@ curl -H "Prefer: count=exact" "https://api.example.com/rest/v1/feedbacks?asset=e
     "endpoint": "https://api.myagent.com/chat",
     "feedback_uri": "ipfs://Qm...",
     "feedback_hash": "a1b2c3d4...",
-    "running_digest": "f9e8d7c6...",
     "is_revoked": false,
     "revoked_at": null,
     "status": "FINALIZED",
     "verified_at": "2024-01-15T10:30:00.000Z",
-    "block_slot": 123456789,
+    "block_slot": "123456789",
+    "tx_index": 0,
     "tx_signature": "5Tz9xK...",
     "created_at": "2024-01-15T10:00:00.000Z"
   }

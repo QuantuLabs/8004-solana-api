@@ -6,17 +6,15 @@ Global and collection-level statistics.
 
 | Endpoint | Description |
 |----------|-------------|
-| `/rest/v1/stats` | Global statistics |
-| `/rest/v1/global_stats` | Same as `/stats` (alias) |
+| `/rest/v1/global_stats` | Global statistics |
 | `/rest/v1/collection_stats` | Per-collection statistics |
-| `/rest/v1/stats/verification` | Verification status breakdown |
+| `/rest/v1/verification_stats` | Verification status breakdown |
 
 ---
 
 ## Global Stats
 
 ```
-GET /rest/v1/stats
 GET /rest/v1/global_stats
 ```
 
@@ -25,16 +23,19 @@ GET /rest/v1/global_stats
 ```typescript
 interface GlobalStats {
   total_agents: number;      // Total registered agents
-  total_feedbacks: number;   // Total feedback events
   total_collections: number; // Total registries
+  total_feedbacks: number;   // Total non-revoked feedbacks
   total_validations: number; // Total validation requests
+  platinum_agents: number;   // Agents with trust_tier = 4
+  gold_agents: number;       // Agents with trust_tier = 3
+  avg_quality: number | null; // Average quality_score (agents with feedbacks)
 }
 ```
 
 ### Example
 
 ```bash
-curl "https://api.example.com/rest/v1/stats"
+curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/global_stats"
 ```
 
 ### Response
@@ -43,9 +44,12 @@ curl "https://api.example.com/rest/v1/stats"
 [
   {
     "total_agents": 12547,
-    "total_feedbacks": 2345678,
     "total_collections": 89,
-    "total_validations": 4521
+    "total_feedbacks": 2345678,
+    "total_validations": 4521,
+    "platinum_agents": 42,
+    "gold_agents": 156,
+    "avg_quality": 7850
   }
 ]
 ```
@@ -73,8 +77,8 @@ interface CollectionStats {
   registry_type: string;     // "BASE" or "USER"
   authority: string | null;  // Registry authority
   agent_count: number;       // Agents in collection
-  total_feedbacks: number;   // Total feedbacks for agents in collection
-  avg_score: number | null;  // Average feedback score
+  top_agents: number;        // Agents with trust_tier >= 3 (Gold+)
+  avg_quality: number | null; // Average quality_score (agents with feedbacks)
 }
 ```
 
@@ -82,12 +86,12 @@ interface CollectionStats {
 
 #### All collections (sorted by agent count)
 ```bash
-curl "https://api.example.com/rest/v1/collection_stats?order=agent_count.desc"
+curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/collection_stats?order=agent_count.desc"
 ```
 
 #### Specific collection
 ```bash
-curl "https://api.example.com/rest/v1/collection_stats?collection=eq.CollectionPubkey"
+curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/collection_stats?collection=eq.CollectionPubkey"
 ```
 
 ### Response
@@ -99,16 +103,16 @@ curl "https://api.example.com/rest/v1/collection_stats?collection=eq.CollectionP
     "registry_type": "BASE",
     "authority": "5FHwkrdxntdK4N6Z4gXQ...",
     "agent_count": 8542,
-    "total_feedbacks": 1847623,
-    "avg_score": 78.5
+    "top_agents": 312,
+    "avg_quality": 7850
   },
   {
     "collection": "7YmP3kL2nQwR...",
     "registry_type": "USER",
     "authority": "4EGvjrcxmtdH5M5Y3fPR...",
     "agent_count": 1205,
-    "total_feedbacks": 234567,
-    "avg_score": 82.3
+    "top_agents": 45,
+    "avg_quality": 8230
   }
 ]
 ```
@@ -118,80 +122,84 @@ curl "https://api.example.com/rest/v1/collection_stats?collection=eq.CollectionP
 ## Verification Stats
 
 ```
-GET /rest/v1/stats/verification
+GET /rest/v1/verification_stats
 ```
 
-Breakdown of verification status across all data types.
+Breakdown of verification status across all data types (for reorg resilience monitoring).
 
 ### Response Schema
 
 ```typescript
-interface VerificationStats {
-  agents: StatusCounts;
-  feedbacks: StatusCounts;
-  validations: StatusCounts;
-  registries: StatusCounts;
-  metadata: StatusCounts;
-  feedback_responses: StatusCounts;
-}
-
-interface StatusCounts {
-  PENDING: number;    // Awaiting verification
-  FINALIZED: number;  // Verified on-chain
-  ORPHANED: number;   // Invalidated by reorg
+interface VerificationStatsRow {
+  model: string;          // Table name
+  pending_count: number;  // Awaiting verification
+  finalized_count: number; // Verified on-chain
+  orphaned_count: number; // Invalidated by reorg
 }
 ```
+
+### Models Tracked
+
+- `agents`
+- `collections`
+- `feedbacks`
+- `feedback_responses`
+- `validations`
+- `metadata`
 
 ### Example
 
 ```bash
-curl "https://api.example.com/rest/v1/stats/verification"
+curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/verification_stats"
 ```
 
 ### Response
 
 ```json
-{
-  "agents": {
-    "PENDING": 42,
-    "FINALIZED": 12505,
-    "ORPHANED": 3
+[
+  {
+    "model": "agents",
+    "pending_count": 42,
+    "finalized_count": 12505,
+    "orphaned_count": 3
   },
-  "feedbacks": {
-    "PENDING": 156,
-    "FINALIZED": 2345522,
-    "ORPHANED": 12
+  {
+    "model": "collections",
+    "pending_count": 0,
+    "finalized_count": 89,
+    "orphaned_count": 0
   },
-  "validations": {
-    "PENDING": 8,
-    "FINALIZED": 4513,
-    "ORPHANED": 0
+  {
+    "model": "feedbacks",
+    "pending_count": 156,
+    "finalized_count": 2345522,
+    "orphaned_count": 12
   },
-  "registries": {
-    "PENDING": 0,
-    "FINALIZED": 89,
-    "ORPHANED": 0
+  {
+    "model": "feedback_responses",
+    "pending_count": 12,
+    "finalized_count": 89012,
+    "orphaned_count": 2
   },
-  "metadata": {
-    "PENDING": 23,
-    "FINALIZED": 45678,
-    "ORPHANED": 5
+  {
+    "model": "validations",
+    "pending_count": 8,
+    "finalized_count": 4513,
+    "orphaned_count": 0
   },
-  "feedback_responses": {
-    "PENDING": 12,
-    "FINALIZED": 89012,
-    "ORPHANED": 2
+  {
+    "model": "metadata",
+    "pending_count": 23,
+    "finalized_count": 45678,
+    "orphaned_count": 5
   }
-}
+]
 ```
 
 ---
 
-## Caching
+## Notes
 
-Collection stats are cached for 5 minutes to prevent expensive aggregation queries on every request.
-
-## Limits
-
-- `collection_stats` returns max 50 collections without filter
-- Use `collection=eq.X` for specific collection stats
+- Collection stats use a database VIEW (computed on query)
+- All quality scores are 0-10000 (divide by 100 for percentage)
+- `avg_quality` is only computed for agents with `feedback_count > 0`
