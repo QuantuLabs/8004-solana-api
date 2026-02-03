@@ -2,8 +2,17 @@
 
 REST API for querying the 8004 Agent Registry on Solana. Compatible with PostgREST/Supabase query format.
 
+> **Self-Hosted**: You can run your own indexer instance.
+> See [8004-solana-indexer](https://github.com/CasterCorp/8004-solana-indexer) for setup instructions.
+
 ## Base URL
 
+**Devnet (Public)**:
+```
+https://YOUR_SUPABASE_PROJECT.supabase.co/rest/v1
+```
+
+**Self-Hosted**:
 ```
 https://your-indexer.example.com/rest/v1
 ```
