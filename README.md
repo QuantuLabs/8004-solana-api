@@ -91,7 +91,7 @@ Response (example):
 curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query { agents(first: 5, orderBy: createdAt, orderDirection: desc) { id owner totalFeedback } }"
+    "query":"query { agents(first: 5, orderBy: createdAt, orderDirection: desc) { id owner totalFeedback solana { assetPubkey } } }"
   }'
 ```
 
@@ -101,7 +101,7 @@ Response (example):
 {
   "data": {
     "agents": [
-      { "id": "sol:ASSET_PUBKEY", "owner": "OWNER_WALLET", "totalFeedback": "12" }
+      { "id": "sol:ASSET_PUBKEY", "owner": "OWNER_WALLET", "totalFeedback": "12", "solana": { "assetPubkey": "ASSET_PUBKEY" } }
     ]
   }
 }

@@ -42,7 +42,7 @@ Rules:
 - Do not combine `skip` and `after`.
 - `after` is only supported with `orderBy: createdAt`.
 
-The API returns an opaque `Agent.cursor`. To fetch the next page, pass the last row cursor back as `after`.
+The API returns an opaque `Agent.cursor` (not the asset pubkey). You do not need to compute it: request it in the page results, then pass it back as `after`. To fetch the next page, pass the last row cursor back as `after`.
 
 ## Filters
 
@@ -75,7 +75,7 @@ Use `orderBy: AgentOrderBy`:
 curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query($first: Int!) { agents(first: $first, orderBy: createdAt, orderDirection: desc) { id owner createdAt totalFeedback solana { trustTier qualityScore } } }",
+    "query":"query($first: Int!) { agents(first: $first, orderBy: createdAt, orderDirection: desc) { id owner createdAt totalFeedback solana { assetPubkey trustTier qualityScore } } }",
     "variables": { "first": 10 }
   }'
 ```
@@ -91,7 +91,7 @@ Response (example):
         "owner": "OWNER_WALLET",
         "createdAt": "1700000000",
         "totalFeedback": "12",
-        "solana": { "trustTier": 2, "qualityScore": 8400 }
+        "solana": { "assetPubkey": "ASSET_PUBKEY", "trustTier": 2, "qualityScore": 8400 }
       }
     ]
   }
