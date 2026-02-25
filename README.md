@@ -120,6 +120,17 @@ Response (example):
 }
 ```
 
+### Incremental agent sync (updatedAt window)
+
+```bash
+curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
+  -H "content-type: application/json" \
+  --data '{
+    "query":"query($from: BigInt!, $to: BigInt!) { agents(first: 100, where: { updatedAt_gt: $from, updatedAt_lt: $to }, orderBy: updatedAt, orderDirection: asc) { id owner totalFeedback updatedAt } }",
+    "variables":{"from":"1770421000","to":"1770422000"}
+  }'
+```
+
 ### Filter feedbacks for one agent
 
 ```bash

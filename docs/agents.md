@@ -60,6 +60,7 @@ The `agents(where: AgentFilter)` input supports:
 - `trustTier_gte`
 - `totalFeedback_gt`, `totalFeedback_gte`
 - `createdAt_gt`, `createdAt_lt` (unix seconds)
+- `updatedAt_gt`, `updatedAt_lt` (unix seconds)
 
 ## Ordering
 
@@ -243,6 +244,17 @@ Response (example):
     ]
   }
 }
+```
+
+### Incremental sync by update window
+
+```bash
+curl -sS "$GRAPHQL_URL" \
+  -H "content-type: application/json" \
+  --data '{
+    "query":"query($from: BigInt!, $to: BigInt!) { agents(first: 100, where: { updatedAt_gt: $from, updatedAt_lt: $to }, orderBy: updatedAt, orderDirection: asc) { id owner totalFeedback updatedAt } }",
+    "variables": { "from": "1770421000", "to": "1770422000" }
+  }'
 ```
 
 ### Agents by canonical collection and creator
