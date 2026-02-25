@@ -2,8 +2,6 @@
 
 The GraphQL API exposes ordering and filtering primitives that can be used to build leaderboards.
 
-If you need the legacy deterministic `sort_key` ranking, refer to the legacy REST v1 docs and enable `API_MODE=hybrid` on your self-hosted indexer.
-
 ## Endpoint
 
 ```http
@@ -78,16 +76,14 @@ Response (example):
 }
 ```
 
-### Top agents filtered by collection (optional)
-
-Most deployments use a single collection for agents, so this filter is rarely needed.
+### Top agents filtered by collection scope (`collection` + `creator`)
 
 ```bash
 curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query($collection: String!) { agents(first: 20, where: { collection: $collection }, orderBy: qualityScore, orderDirection: desc) { id owner totalFeedback solana { collection trustTier qualityScore } } }",
-    "variables": { "collection": "COLLECTION_PUBKEY" }
+    "query":"query($collection: String!, $creator: String!) { agents(first: 20, where: { collectionPointer: $collection, creator: $creator }, orderBy: qualityScore, orderDirection: desc) { id owner creator collectionPointer totalFeedback solana { collection trustTier qualityScore } } }",
+    "variables": { "collection": "my-col", "creator": "CREATOR_WALLET" }
   }'
 ```
 
@@ -100,6 +96,8 @@ Response (example):
       {
         "id": "sol:ASSET_PUBKEY",
         "owner": "OWNER_WALLET",
+        "creator": "CREATOR_WALLET",
+        "collectionPointer": "my-col",
         "totalFeedback": "12",
         "solana": { "collection": "COLLECTION_PUBKEY", "trustTier": 2, "qualityScore": 8400 }
       }

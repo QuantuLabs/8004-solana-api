@@ -1,0 +1,91 @@
+# Collection + Parent-Child GraphQL examples
+# Endpoint: POST /v2/graphql
+# Content-Type: application/json
+
+# Variables example:
+# { "first": 20, "skip": 0 }
+query GetCollections($first: Int!, $skip: Int!) {
+  collections(first: $first, skip: $skip) {
+    collection
+    creator
+    firstSeenAsset
+    firstSeenAt
+    firstSeenSlot
+    firstSeenTxSignature
+    lastSeenAt
+    lastSeenSlot
+    lastSeenTxSignature
+    assetCount
+  }
+}
+
+# Variables example:
+# { "collection": "my-col", "creator": "CREATOR_WALLET" }
+query GetCollectionAssetCount($collection: String!, $creator: String) {
+  collectionAssetCount(collection: $collection, creator: $creator)
+}
+
+# Variables example:
+# { "collection": "my-col", "creator": "CREATOR_WALLET", "first": 50, "skip": 0 }
+query GetCollectionAssets($collection: String!, $creator: String, $first: Int!, $skip: Int!) {
+  collectionAssets(
+    collection: $collection
+    creator: $creator
+    first: $first
+    skip: $skip
+    orderBy: createdAt
+    orderDirection: desc
+  ) {
+    id
+    owner
+    creator
+    collectionPointer
+    colLocked
+    parentAsset
+    parentCreator
+    parentLocked
+    createdAt
+  }
+}
+
+# parent accepts namespaced ID (sol:<asset>) or raw asset pubkey
+# Variables example:
+# { "parent": "sol:PARENT_ASSET_PUBKEY" }
+query GetAgentChildren($parent: ID!) {
+  agentChildren(parent: $parent, first: 100, skip: 0) {
+    id
+    owner
+    parentAsset
+    parentCreator
+    parentLocked
+  }
+}
+
+# Variables example:
+# { "asset": "sol:CHILD_ASSET_PUBKEY" }
+query GetAgentLineage($asset: ID!) {
+  agentLineage(asset: $asset, includeSelf: true, first: 100, skip: 0) {
+    id
+    creator
+    parentAsset
+    collectionPointer
+  }
+}
+
+# Variables example:
+# { "root": "sol:ROOT_ASSET_PUBKEY" }
+query GetAgentTree($root: ID!) {
+  agentTree(root: $root, maxDepth: 5, includeRoot: true, first: 200, skip: 0) {
+    depth
+    path
+    parentAsset
+    agent {
+      id
+      owner
+      creator
+      collectionPointer
+      parentAsset
+      parentCreator
+    }
+  }
+}

@@ -1,22 +1,21 @@
-# Statistics API
+# Stats + System Endpoints (REST v1)
 
-Global and collection-level statistics.
-
-Note: the current 8004 program uses a single agent collection per network. Collection-level breakdowns are mostly informational / historical.
+Global rollups, collection aggregates, verification counters, and system-level listing endpoints.
 
 ## Endpoints
 
 | Endpoint | Description |
-|----------|-------------|
-| `/rest/v1/global_stats` | Global statistics |
-| `/rest/v1/collection_stats` | Per-collection statistics |
-| `/rest/v1/verification_stats` | Verification status breakdown |
-
----
+|---|---|
+| `/rest/v1/stats` | Global stats (alias of `/global_stats`) |
+| `/rest/v1/global_stats` | Global stats |
+| `/rest/v1/collection_stats` | Collection-level aggregates |
+| `/rest/v1/stats/verification` | Verification status counts by dataset |
+| `/rest/v1/validations` | Deprecated compatibility endpoint (returns `410`) |
 
 ## Global Stats
 
 ```http
+GET /rest/v1/stats
 GET /rest/v1/global_stats
 ```
 
@@ -24,20 +23,17 @@ GET /rest/v1/global_stats
 
 ```typescript
 interface GlobalStats {
-  total_agents: number;      // Total registered agents
-  total_collections: number; // Distinct collections seen in indexed data (usually 1)
-  total_feedbacks: number;   // Total non-revoked feedbacks
-  total_validations: number; // Total validation requests
-  platinum_agents: number;   // Agents with trust_tier = 4
-  gold_agents: number;       // Agents with trust_tier = 3
-  avg_quality: number | null; // Average quality_score (agents with feedbacks)
+  total_agents: number;
+  total_feedbacks: number;
+  total_collections: number;
+  total_validations: number; // legacy field (validation module archived on-chain)
 }
 ```
 
 ### Example
 
 ```bash
-curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/global_stats"
+curl -sS "$BASE_URL/global_stats"
 ```
 
 ### Response
@@ -46,17 +42,12 @@ curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/global_stats"
 [
   {
     "total_agents": 12547,
-    "total_collections": 89,
     "total_feedbacks": 2345678,
-    "total_validations": 4521,
-    "platinum_agents": 42,
-    "gold_agents": 156,
-    "avg_quality": 7850
+    "total_collections": 89,
+    "total_validations": 4521
   }
 ]
 ```
-
----
 
 ## Collection Stats
 
@@ -67,122 +58,79 @@ GET /rest/v1/collection_stats
 ### Query Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
-| `collection` | string | Specific collection (optional) |
+|---|---|---|
+| `collection` | string | Optional collection pubkey filter |
 | `order` | string | `agent_count.desc` to sort by size |
 
 ### Response Schema
 
 ```typescript
 interface CollectionStats {
-  collection: string;        // Collection pubkey
-  agent_count: number;       // Agents in collection
-  top_agents: number;        // Agents with trust_tier >= 3 (Gold+)
-  avg_quality: number | null; // Average quality_score (agents with feedbacks)
+  collection: string;
+  registry_type: string;
+  authority: string | null;
+  agent_count: number;
+  total_feedbacks: number;
+  avg_score: number | null;
 }
 ```
 
 ### Examples
 
-#### All collections (sorted by agent count)
 ```bash
-curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/collection_stats?order=agent_count.desc"
+curl -sS "$BASE_URL/collection_stats?order=agent_count.desc"
+curl -sS "$BASE_URL/collection_stats?collection=eq.COLLECTION_PUBKEY"
 ```
 
-#### Specific collection
-```bash
-curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/collection_stats?collection=eq.CollectionPubkey"
-```
-
-### Response
-
-```json
-[
-  {
-    "collection": "9KmLpQwR5tYz...",
-    "agent_count": 8542,
-    "top_agents": 312,
-    "avg_quality": 7850
-  }
-]
-```
-
----
-
-## Verification Stats
+## Verification Status Stats
 
 ```http
-GET /rest/v1/verification_stats
+GET /rest/v1/stats/verification
 ```
-
-Breakdown of verification status across all data types (for reorg resilience monitoring).
 
 ### Response Schema
 
 ```typescript
-interface VerificationStatsRow {
-  model: string;          // Table name
-  pending_count: number;  // Awaiting verification
-  finalized_count: number; // Verified on-chain
-  orphaned_count: number; // Invalidated by reorg
+interface VerificationMap {
+  PENDING: number;
+  FINALIZED: number;
+  ORPHANED: number;
+}
+
+interface VerificationStats {
+  agents: VerificationMap;
+  feedbacks: VerificationMap;
+  validations: VerificationMap; // legacy counters
+  registries: VerificationMap;
+  metadata: VerificationMap;
+  feedback_responses: VerificationMap;
 }
 ```
-
-### Models Tracked
-
-- `agents`
-- `feedbacks`
-- `feedback_responses`
-- `validations`
-- `metadata`
 
 ### Example
 
 ```bash
-curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/verification_stats"
+curl -sS "$BASE_URL/stats/verification"
 ```
 
 ### Response
 
 ```json
-[
-  {
-    "model": "agents",
-    "pending_count": 42,
-    "finalized_count": 12505,
-    "orphaned_count": 3
-  },
-  {
-    "model": "feedbacks",
-    "pending_count": 156,
-    "finalized_count": 2345522,
-    "orphaned_count": 12
-  },
-  {
-    "model": "feedback_responses",
-    "pending_count": 12,
-    "finalized_count": 89012,
-    "orphaned_count": 2
-  },
-  {
-    "model": "validations",
-    "pending_count": 8,
-    "finalized_count": 4513,
-    "orphaned_count": 0
-  },
-  {
-    "model": "metadata",
-    "pending_count": 23,
-    "finalized_count": 45678,
-    "orphaned_count": 5
-  }
-]
+{
+  "agents": { "PENDING": 2, "FINALIZED": 12505, "ORPHANED": 3 },
+  "feedbacks": { "PENDING": 10, "FINALIZED": 2345522, "ORPHANED": 12 },
+  "validations": { "PENDING": 1, "FINALIZED": 4513, "ORPHANED": 0 },
+  "registries": { "PENDING": 0, "FINALIZED": 89, "ORPHANED": 0 },
+  "metadata": { "PENDING": 7, "FINALIZED": 45678, "ORPHANED": 5 },
+  "feedback_responses": { "PENDING": 1, "FINALIZED": 89012, "ORPHANED": 2 }
+}
 ```
 
----
+## Validations (Deprecated)
 
-## Notes
+```http
+GET /rest/v1/validations
+```
 
-- Collection stats use a database VIEW (computed on query)
-- All quality scores are 0-10000 (divide by 100 for percentage)
-- `avg_quality` is only computed for agents with `feedback_count > 0`
+Current indexers return `410 Gone` because validation is archived in
+`agent-registry-8004` (`v0.5.0+`).

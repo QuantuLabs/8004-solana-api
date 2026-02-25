@@ -7,6 +7,7 @@ Default public API is **GraphQL**.
 
 > **Self-hosted**: run your own indexer instance with
 > [8004-solana-indexer](https://github.com/QuantuLabs/8004-solana-indexer).
+> Set `INDEX_COLLECTION_METADATA=true` to ingest collection metadata from CID JSON.
 
 ## Architecture
 
@@ -51,6 +52,15 @@ Available `Query` operations:
 - `hashChainHeads(agent: ID!)`
 - `hashChainLatestCheckpoints(agent: ID!)`
 - `hashChainReplayData(agent, chainType, fromCount, toCount, first)`
+- `collections(first, skip, collection, creator)`
+- `collectionAssetCount(collection, creator)`
+- `collectionAssets(collection, creator, first, skip, orderBy, orderDirection)`
+- `agentChildren(parent, first, skip)`
+- `agentTree(root, maxDepth, includeRoot, first, skip)`
+- `agentLineage(asset, includeSelf, first, skip)`
+
+Compatibility note:
+- `validation` / `validations` may still exist in some indexer schemas for backward compatibility, but the validation module is archived on-chain (`agent-registry-8004` v0.5.0+).
 
 ## ID Formats
 
@@ -223,6 +233,8 @@ Response (example):
 - [Metadata](docs/metadata.md)
 - [Leaderboard](docs/leaderboard.md)
 - [Collections](docs/collections.md)
+- [Collection + Parent-Child Examples](docs/examples/collection-parent-child.graphql)
+- [Collection + Parent-Child REST Examples](docs/examples/collection-parent-child.rest.sh)
 - [Stats](docs/stats.md)
 - [Integrity / Hash-Chain](docs/integrity.md)
 

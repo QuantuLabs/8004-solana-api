@@ -50,8 +50,12 @@ The `agents(where: AgentFilter)` input supports:
 
 - `id`, `id_in`
 - `owner`, `owner_in`
+- `creator`
 - `agentWallet`
-- `collection` (informational; deployments typically use a single collection)
+- `collection` (raw Metaplex collection)
+- `collectionPointer` (canonical collection id)
+- `parentAsset`, `parentCreator`
+- `colLocked`, `parentLocked`
 - `atomEnabled`
 - `trustTier_gte`
 - `totalFeedback_gt`, `totalFeedback_gte`
@@ -104,7 +108,7 @@ Response (example):
 curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query($id: ID!) { agent(id: $id) { id owner agentURI agentWallet createdAt updatedAt totalFeedback solana { assetPubkey collection atomEnabled trustTier qualityScore confidence riskScore diversityRatio verificationStatus feedbackDigest responseDigest revokeDigest } } }",
+    "query":"query($id: ID!) { agent(id: $id) { id owner creator agentURI agentWallet collectionPointer colLocked parentAsset parentCreator parentLocked createdAt updatedAt totalFeedback solana { assetPubkey collection atomEnabled trustTier qualityScore confidence riskScore diversityRatio verificationStatus feedbackDigest responseDigest revokeDigest } } }",
     "variables": { "id": "sol:ASSET_PUBKEY" }
   }'
 ```
@@ -117,8 +121,14 @@ Response (example):
     "agent": {
       "id": "sol:ASSET_PUBKEY",
       "owner": "OWNER_WALLET",
+      "creator": "CREATOR_WALLET",
       "agentURI": "https://example.com/agent.json",
       "agentWallet": "AGENT_WALLET",
+      "collectionPointer": "my-col",
+      "colLocked": true,
+      "parentAsset": "PARENT_ASSET_PUBKEY",
+      "parentCreator": "PARENT_CREATOR_WALLET",
+      "parentLocked": false,
       "createdAt": "1700000000",
       "updatedAt": "1700000000",
       "totalFeedback": "12",
@@ -235,6 +245,26 @@ Response (example):
 }
 ```
 
-### Agent collection (informational)
+### Agents by canonical collection and creator
 
-Most deployments use a single collection for agents. See [Collections](collections.md) if you need to read or filter by it.
+```bash
+curl -sS "$GRAPHQL_URL" \
+  -H "content-type: application/json" \
+  --data '{
+    "query":"query($collection: String!, $creator: String!) { agents(first: 20, where: { collectionPointer: $collection, creator: $creator }, orderBy: createdAt, orderDirection: desc) { id creator collectionPointer colLocked parentAsset } }",
+    "variables": { "collection": "my-col", "creator": "CREATOR_WALLET" }
+  }'
+```
+
+### Direct children via `parentAsset`
+
+```bash
+curl -sS "$GRAPHQL_URL" \
+  -H "content-type: application/json" \
+  --data '{
+    "query":"query($parent: String!) { agents(first: 20, where: { parentAsset: $parent }, orderBy: createdAt, orderDirection: desc) { id owner parentAsset parentCreator parentLocked } }",
+    "variables": { "parent": "PARENT_ASSET_PUBKEY" }
+  }'
+```
+
+For dedicated collection and hierarchy queries (`collections`, `collectionAssets`, `agentChildren`, `agentTree`, `agentLineage`), see [Collections](collections.md).

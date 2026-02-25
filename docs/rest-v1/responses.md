@@ -1,87 +1,102 @@
-# Feedback Responses API
+# Feedback Responses + Revocations API
 
-List feedback responses (agent/owner replies to client feedback).
+Read response events and revocation events.
 
-## Endpoint
+## Feedback Responses Endpoints
 
-```
+```http
 GET /rest/v1/feedback_responses
+GET /rest/v1/responses  # alias
 ```
 
-## Query Parameters
+## Query Parameters (`feedback_responses` / `responses`)
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
-| `asset` | string | Filter by agent asset ID |
-| `client_address` | string | Filter by original feedback client |
+|---|---|---|
+| `asset` | string | Filter by agent asset pubkey |
+| `client_address` | string | Filter by feedback client |
 | `feedback_index` | string | Filter by feedback index |
 | `responder` | string | Filter by responder wallet |
-| `status` | string | Verification status filter |
-| `limit` | number | Max results (default: 100) |
+| `order` | string | `response_count.asc` or `response_count.desc` |
+| `status` | string | Verification status (`PENDING`, `FINALIZED`, `ORPHANED`) |
+| `limit` | number | Max results (default `100`) |
 | `offset` | number | Pagination offset |
 
 ## Response Schema
 
 ```typescript
 interface FeedbackResponse {
-  id: string;                    // Unique response ID
-  asset: string;                 // Agent asset pubkey
-  client_address: string;        // Original feedback client
-  feedback_index: string;        // Parent feedback index (BigInt as string)
-  responder: string;             // Who responded (owner/agent wallet)
-  response_uri: string | null;   // Response content URI
-  response_hash: string | null;  // SHA-256 of response (hex)
-  running_digest: string | null; // Hash-chain digest (hex) - see [SEAL](https://github.com/QuantuLabs/8004-solana/blob/main/docs/SEAL.md)
-  block_slot: string;            // Solana slot (BigInt as string)
-  tx_index: number | null;       // Transaction index for ordering
-  tx_signature: string;          // Transaction signature
-  created_at: string;            // ISO timestamp
-  status: string;                // PENDING | FINALIZED | ORPHANED
-  verified_at: string | null;    // When verified
+  id: string;
+  feedback_id: string | null;
+  asset: string;
+  client_address: string;
+  feedback_index: string;
+  responder: string;
+  response_uri: string | null;
+  response_hash: string | null;
+  running_digest: string | null;
+  response_count: string | null;
+  status: "PENDING" | "FINALIZED" | "ORPHANED";
+  verified_at: string | null;
+  block_slot: number;
+  tx_signature: string;
+  created_at: string;
 }
 ```
 
+Notes:
+- `feedback_id` can be `null` for orphan responses (feedback not indexed yet).
+- `response_count` is a bigint string.
+
 ## Examples
 
-### Get responses for a specific feedback
+### Responses for a specific feedback
+
 ```bash
-curl -H "apikey: $SUPABASE_KEY" \
-  "$BASE_URL/feedback_responses?asset=eq.Agent&client_address=eq.Client&feedback_index=eq.0"
+curl -sS "$BASE_URL/feedback_responses?asset=eq.AGENT_ASSET&client_address=eq.CLIENT_WALLET&feedback_index=eq.0"
 ```
 
-### Get all responses for an agent
+### Responses ordered by response count
+
 ```bash
-curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/feedback_responses?asset=eq.AgentPubkey"
+curl -sS "$BASE_URL/responses?asset=eq.AGENT_ASSET&order=response_count.desc&limit=100"
 ```
 
-### Get responses by a specific responder
-```bash
-curl -H "apikey: $SUPABASE_KEY" "$BASE_URL/feedback_responses?responder=eq.ResponderWallet"
+## Revocations Endpoint
+
+```http
+GET /rest/v1/revocations
 ```
 
-## Response Example
+## Query Parameters (`revocations`)
 
-```json
-[
-  {
-    "id": "8Rz4Nqk...:5FHwkrd...:0:7YmP3kL...:6Uz0yL...",
-    "asset": "8Rz4NqkPsXdVNgmSi2wYBRJbT123...",
-    "client_address": "5FHwkrdxntdK4N6Z4gXQ...",
-    "feedback_index": "0",
-    "responder": "7YmP3kL2nQwR...",
-    "response_uri": "ipfs://QmResponse...",
-    "response_hash": "b2c3d4e5...",
-    "running_digest": null,
-    "block_slot": "123456800",
-    "tx_index": 0,
-    "tx_signature": "6Uz0yL...",
-    "created_at": "2024-01-15T10:30:00.000Z",
-    "status": "FINALIZED",
-    "verified_at": "2024-01-15T11:00:00.000Z"
-  }
-]
+| Parameter | Type | Description |
+|---|---|---|
+| `asset` | string | Filter by agent asset pubkey |
+| `client` | string | Filter by client wallet |
+| `order` | string | `revoke_count.desc` for latest count ranking |
+| `status` | string | Verification status (`PENDING`, `FINALIZED`, `ORPHANED`) |
+| `limit` | number | Max results |
+| `offset` | number | Pagination offset |
+
+## Revocation Response Schema
+
+```typescript
+interface Revocation {
+  id: string;
+  asset: string;
+  client_address: string;
+  feedback_index: string;
+  feedback_hash: string | null;
+  slot: number;
+  original_score: number | null;
+  atom_enabled: boolean;
+  had_impact: boolean;
+  running_digest: string | null;
+  revoke_count: number;
+  tx_signature: string;
+  status: "PENDING" | "FINALIZED" | "ORPHANED";
+  verified_at: string | null;
+  created_at: string;
+}
 ```
-
-## Multiple Responses
-
-ERC-8004 allows multiple responses per responder to the same feedback. The unique constraint is on `(asset, client_address, feedback_index, responder, tx_signature)`, allowing different transactions to add responses.
