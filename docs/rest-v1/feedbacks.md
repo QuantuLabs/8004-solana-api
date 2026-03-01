@@ -2,6 +2,12 @@
 
 List feedback events (client reviews of agents).
 
+All examples below assume:
+
+```bash
+BASE_URL="https://your-indexer.example.com/rest/v1"
+```
+
 ## Endpoint
 
 ```http
@@ -14,27 +20,37 @@ GET /rest/v1/feedbacks
 |---|---|---|
 | `asset` | string | Filter by agent asset pubkey |
 | `client_address` | string | Filter by client wallet |
-| `feedback_index` | string | Filter by one feedback index (`eq.<n>` or raw) |
-| `feedback_index` | `in.(1,2,3)` | Filter by multiple indices |
+| `feedback_id` | string | Sequential feedback ID (`eq.<n>` or raw integer) |
+| `feedback_index` | string | Feedback index (`eq.<n>` or raw integer) |
+| `feedback_index` | `in.(1,2,3)` | Multiple feedback indices |
 | `is_revoked` | boolean | Filter revoked/active feedbacks |
 | `tag1` | string | Filter by primary tag |
 | `tag2` | string | Filter by secondary tag |
 | `endpoint` | string | Filter by endpoint |
-| `or` | string | OR filter: `(tag1.eq.X,tag2.eq.X)` |
-| `status` | string | Verification status (`PENDING`, `FINALIZED`, `ORPHANED`) |
-| `limit` | number | Max results (default `100`) |
-| `offset` | number | Pagination offset |
+| `created_at` | string | Timestamp filter (`eq`, `gt`, `gte`, `lt`, `lte`) |
+| `created_at_gt` | string | Strict lower bound timestamp |
+| `created_at_lt` | string | Strict upper bound timestamp |
+| `or` | string | OR tag filter: `(tag1.eq.X,tag2.eq.X)` |
+| `status` | string | Status filter (`eq.<STATUS>` or `neq.<STATUS>`) |
+| `includeOrphaned` | boolean | Include orphaned rows |
+| `limit` | number | Max results (default `100`, max `1000`) |
+| `offset` | number | Pagination offset (max `10000`) |
+
+Notes:
+- Invalid `feedback_id`, `feedback_index`, or timestamp filters return `400`.
+- `feedback_id` without `asset` can be ambiguous and may return `400`.
 
 ## Response Schema
 
 ```typescript
 interface Feedback {
-  id: string;
+  id: string | null;
+  feedback_id: string | null;
   asset: string;
   client_address: string;
   feedback_index: string;      // bigint string
   value: string;               // i128 raw value string
-  value_decimals: number;      // decimal precision (0-18)
+  value_decimals: number;      // decimal precision
   score: number | null;
   tag1: string;
   tag2: string;
@@ -55,16 +71,15 @@ interface Feedback {
 ## Examples
 
 ```bash
-curl -sS "$BASE_URL/feedbacks?asset=eq.AGENT_ASSET"
-curl -sS "$BASE_URL/feedbacks?client_address=eq.CLIENT_WALLET"
-curl -sS "$BASE_URL/feedbacks?asset=eq.AGENT_ASSET&feedback_index=in.(0,1,2)"
-curl -sS "$BASE_URL/feedbacks?is_revoked=eq.false"
+curl -sS "$BASE_URL/feedbacks?asset=eq.AGENT_ASSET&status=neq.ORPHANED"
+curl -sS "$BASE_URL/feedbacks?asset=eq.AGENT_ASSET&feedback_index=in.(0,1,2)&limit=50"
+curl -sS "$BASE_URL/feedbacks?asset=eq.AGENT_ASSET&created_at_gt=1770500000&created_at_lt=1770600000"
 curl -sS "$BASE_URL/feedbacks?or=(tag1.eq.latency,tag2.eq.latency)"
 ```
 
 With total count:
 
 ```bash
-curl -sS -H "Prefer: count=exact" "$BASE_URL/feedbacks?asset=eq.AGENT_ASSET"
+curl -sS -H "Prefer: count=exact" "$BASE_URL/feedbacks?asset=eq.AGENT_ASSET&limit=25&offset=0"
 # Content-Range header returned
 ```

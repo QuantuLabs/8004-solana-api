@@ -17,7 +17,7 @@ GRAPHQL_URL="https://8004-indexer-production.up.railway.app/v2/graphql"
 ## Queries
 
 - `protocols(first, skip): [Protocol!]!` (global rollups for the current network)
-- `globalStats(id: ID!): GlobalStats` (global rollups)
+- `globalStats: GlobalStats` (global rollups)
 - `agentStats(id: ID!): AgentStats` (per-agent aggregates)
 
 ## Examples
@@ -28,7 +28,7 @@ GRAPHQL_URL="https://8004-indexer-production.up.railway.app/v2/graphql"
 curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query { protocols { id totalAgents totalFeedback totalValidations tags } }"
+    "query":"query { protocols { id totalAgents totalFeedback tags } }"
   }'
 ```
 
@@ -42,7 +42,6 @@ Response (example):
         "id": "solana-devnet",
         "totalAgents": "136",
         "totalFeedback": "420",
-        "totalValidations": "0",
         "tags": ["tag_a", "tag_b"]
       }
     ]
@@ -50,14 +49,13 @@ Response (example):
 }
 ```
 
-### Global stats (explicit ID)
+### Global stats
 
 ```bash
 curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query($id: ID!) { globalStats(id: $id) { id totalAgents totalFeedback totalValidations totalProtocols tags } }",
-    "variables": { "id": "solana-devnet" }
+    "query":"query { globalStats { id totalAgents totalFeedback totalCollections tags } }"
   }'
 ```
 
@@ -70,8 +68,7 @@ Response (example):
       "id": "solana-devnet",
       "totalAgents": "136",
       "totalFeedback": "420",
-      "totalValidations": "0",
-      "totalProtocols": "1",
+      "totalCollections": "1",
       "tags": ["tag_a", "tag_b"]
     }
   }
@@ -84,7 +81,7 @@ Response (example):
 curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query($id: ID!) { agentStats(id: $id) { id totalFeedback averageFeedbackValue totalValidations completedValidations averageValidationScore lastActivity } }",
+    "query":"query($id: ID!) { agentStats(id: $id) { id totalFeedback averageFeedbackValue lastActivity } }",
     "variables": { "id": "sol:ASSET_PUBKEY" }
   }'
 ```
@@ -98,9 +95,6 @@ Response (example):
       "id": "sol:ASSET_PUBKEY",
       "totalFeedback": "12",
       "averageFeedbackValue": "95.00",
-      "totalValidations": "0",
-      "completedValidations": "0",
-      "averageValidationScore": null,
       "lastActivity": "1700000000"
     }
   }

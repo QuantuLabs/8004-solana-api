@@ -2,6 +2,12 @@
 
 Rank agents by average feedback score.
 
+All examples below assume:
+
+```bash
+BASE_URL="https://your-indexer.example.com/rest/v1"
+```
+
 ## Endpoint
 
 ```http
@@ -13,7 +19,8 @@ GET /rest/v1/leaderboard
 | Parameter | Type | Description |
 |---|---|---|
 | `collection` | string | Optional collection filter |
-| `limit` | number | Max results (default `100`) |
+| `includeOrphaned` | boolean | Include orphaned rows |
+| `limit` | number | Max results (default `100`, max `1000`) |
 
 ## Response Schema
 
@@ -23,7 +30,7 @@ interface LeaderboardEntry {
   owner: string;
   collection: string;
   trust_score: number;    // rounded AVG(score)
-  feedback_count: number; // number of scored, non-revoked feedbacks
+  feedback_count: number; // scored, non-revoked feedback count
 }
 ```
 
@@ -32,6 +39,7 @@ interface LeaderboardEntry {
 ```bash
 curl -sS "$BASE_URL/leaderboard?limit=10"
 curl -sS "$BASE_URL/leaderboard?collection=eq.COLLECTION_PUBKEY&limit=50"
+curl -sS "$BASE_URL/leaderboard?includeOrphaned=true&limit=20"
 ```
 
 ## Notes

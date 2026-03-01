@@ -2,8 +2,8 @@
 
 Default public API is **GraphQL**.
 
-> **Legacy REST v1** documentation is available in [`docs/rest-v1.md`](docs/rest-v1.md).
-> By default, new deployments should use GraphQL.
+> **REST v1 (PostgREST-compatible)** documentation is available in [`docs/rest-v1.md`](docs/rest-v1.md).
+> GraphQL remains the default for new deployments.
 
 > **Self-hosted**: run your own indexer instance with
 > [8004-solana-indexer](https://github.com/QuantuLabs/8004-solana-indexer).
@@ -46,7 +46,7 @@ Available `Query` operations:
 - `agentStats(id: ID!)`
 - `protocol(id: ID!)`
 - `protocols(first, skip)`
-- `globalStats(id: ID!)`
+- `globalStats`
 - `agentSearch(query, first)`
 - `agentRegistrationFiles(first, skip, where)`
 - `hashChainHeads(agent: ID!)`
@@ -60,7 +60,8 @@ Available `Query` operations:
 - `agentLineage(asset, includeSelf, first, skip)`
 
 Compatibility note:
-- `validation` / `validations` may still exist in some indexer schemas for backward compatibility, but the validation module is archived on-chain (`agent-registry-8004` v0.5.0+).
+- Validation indexing is archived on-chain (`agent-registry-8004` v0.5.0+).
+- Public API surfaces no longer expose `validation` / `validations`; REST `/rest/v1/validations` returns `410 Gone`.
 
 ## ID Formats
 
@@ -220,7 +221,7 @@ Response (example):
 curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query { protocols { id totalAgents totalFeedback totalValidations tags } }"
+    "query":"query { globalStats { id totalAgents totalFeedback totalCollections tags } }"
   }'
 ```
 
@@ -229,9 +230,13 @@ Response (example):
 ```json
 {
   "data": {
-    "protocols": [
-      { "id": "solana-devnet", "totalAgents": "136", "totalFeedback": "420", "totalValidations": "0", "tags": ["tag_a", "tag_b"] }
-    ]
+    "globalStats": {
+      "id": "solana-devnet",
+      "totalAgents": "136",
+      "totalFeedback": "420",
+      "totalCollections": "1",
+      "tags": ["tag_a", "tag_b"]
+    }
   }
 }
 ```
@@ -251,14 +256,14 @@ Response (example):
 
 ## Cursor Pagination
 
-- `after` cursor is supported on `agents`, `feedbacks`, `feedbackResponses`, `validations`
+- `after` cursor is supported on `agents`, `feedbacks`, `feedbackResponses`
 - Cursor pagination is only valid with `orderBy: createdAt`
 - Do not combine `after` and `skip` in the same query
 - Request the `cursor` field in list queries, and pass it back as `after` to fetch the next page
 
-## Legacy REST v1
+## REST v1 Compatibility
 
-If you still need PostgREST-compatible endpoints, use:
+If you need PostgREST-compatible endpoints, use:
 
 - [`docs/rest-v1.md`](docs/rest-v1.md)
 

@@ -2,6 +2,12 @@
 
 Read on-chain metadata key/value entries for agents.
 
+All examples below assume:
+
+```bash
+BASE_URL="https://your-indexer.example.com/rest/v1"
+```
+
 ## Endpoint
 
 ```http
@@ -14,8 +20,14 @@ GET /rest/v1/metadata
 |---|---|---|
 | `asset` | string | Filter by agent asset pubkey |
 | `key` | string | Filter by metadata key |
-| `status` | string | Verification status (`PENDING`, `FINALIZED`, `ORPHANED`) |
-| `limit` | number | Max results (server-enforced cap) |
+| `status` | string | Status filter (`eq.<STATUS>` or `neq.<STATUS>`) |
+| `includeOrphaned` | boolean | Include orphaned rows |
+| `limit` | number | Page size (default `100`, hard max `100`) |
+| `offset` | number | Pagination offset (max `10000`) |
+
+Notes:
+- Metadata endpoint has a lower `limit` cap (`100`) than other REST lists.
+- Default behavior excludes orphaned rows.
 
 ## Response Schema
 
@@ -31,13 +43,35 @@ interface MetadataRow {
 }
 ```
 
-Notes:
+## Pagination + Ordering
+
+Rows are returned in deterministic order:
+
+1. `slot DESC`
+2. `txIndex DESC`
+3. `eventOrdinal DESC`
+4. `agentId ASC`
+5. `key ASC`
+6. `id ASC`
+
+If `Prefer: count=exact` is sent, a `Content-Range` header is returned.
+
+## Payload Safety
+
 - Values are returned as base64 after storage decompression.
+- Responses are truncated if aggregate decompressed payload exceeds server safety limits.
 - Keys with `_uri:` prefix are reserved for indexer-derived data.
 
 ## Examples
 
 ```bash
-curl -sS "$BASE_URL/metadata?asset=eq.AGENT_ASSET"
-curl -sS "$BASE_URL/metadata?asset=eq.AGENT_ASSET&key=eq.website"
+curl -sS "$BASE_URL/metadata?asset=eq.AGENT_ASSET&limit=50&offset=0"
+curl -sS "$BASE_URL/metadata?asset=eq.AGENT_ASSET&key=eq.website&status=neq.ORPHANED"
+```
+
+With total count:
+
+```bash
+curl -sS -H "Prefer: count=exact" "$BASE_URL/metadata?asset=eq.AGENT_ASSET&limit=10&offset=20"
+# Content-Range header returned
 ```

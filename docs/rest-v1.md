@@ -1,30 +1,37 @@
-# REST v1 (Legacy)
+# REST v1 (PostgREST-Compatible)
 
-This document keeps the legacy PostgREST-compatible API reference.
+REST v1 remains available as a compatibility surface for PostgREST-style clients.
 
-Default 8004 deployments now use GraphQL (`/v2/graphql`).
-On GraphQL-only deployments, `/rest/v1/*` returns `410 Gone`.
+Default 8004 deployments use GraphQL (`/v2/graphql`).
+If REST is disabled, `/rest/v1/*` returns `410 Gone`.
 
 ## Base URL (REST v1)
 
 | Deployment Type | Base URL |
 |---|---|
-| Legacy Supabase-hosted | `https://uhjytdjxvfbppgjicfly.supabase.co/rest/v1` |
-| Self-hosted REST mode | `https://your-indexer.example.com/rest/v1` |
+| Reference deployment (REST-enabled) | `https://8004-indexer-production.up.railway.app/rest/v1` |
+| Self-hosted indexer | `https://your-indexer.example.com/rest/v1` |
+| Direct Supabase/PostgREST | `https://<project>.supabase.co/rest/v1` or `https://your-postgrest.example.com` |
+
+All examples below assume:
+
+```bash
+BASE_URL="https://your-indexer.example.com/rest/v1"
+```
 
 ## Authentication
 
-For the legacy Supabase-hosted endpoint, include an API key:
+Reference deployments are public read-only.
+
+Self-hosted/Supabase/PostgREST deployments may require API key or bearer headers.
+
+Supabase example:
 
 ```bash
-apikey: sb_publishable_...
-```
-
-Example:
-
-```bash
-curl -H "apikey: sb_publishable_..." \
-  "https://uhjytdjxvfbppgjicfly.supabase.co/rest/v1/agents"
+curl -sS \
+  -H "apikey: sb_publishable_..." \
+  -H "Authorization: Bearer sb_publishable_..." \
+  "$BASE_URL/agents?limit=1"
 ```
 
 ## Endpoint Reference
@@ -39,7 +46,6 @@ curl -H "apikey: sb_publishable_..." \
 | `/feedback_responses` | List feedback responses | [docs/rest-v1/responses.md](rest-v1/responses.md) |
 | `/responses` | Alias for feedback responses | [docs/rest-v1/responses.md](rest-v1/responses.md) |
 | `/revocations` | List feedback revocation events | [docs/rest-v1/responses.md](rest-v1/responses.md) |
-| `/validations` | Deprecated compatibility endpoint (returns `410`) | [docs/rest-v1/stats.md](rest-v1/stats.md) |
 | `/metadata` | Agent metadata key-value pairs | [docs/rest-v1/metadata.md](rest-v1/metadata.md) |
 | `/leaderboard` | Top agents by trust score | [docs/rest-v1/leaderboard.md](rest-v1/leaderboard.md) |
 | `/collections` | Canonical collections (`creator+collection`) | [docs/rest-v1/agents.md](rest-v1/agents.md) |
@@ -48,6 +54,7 @@ curl -H "apikey: sb_publishable_..." \
 | `/stats` and `/global_stats` | Global statistics | [docs/rest-v1/stats.md](rest-v1/stats.md) |
 | `/collection_stats` | Per-collection statistics | [docs/rest-v1/stats.md](rest-v1/stats.md) |
 | `/stats/verification` | Verification status breakdown | [docs/rest-v1/stats.md](rest-v1/stats.md) |
+| `/validations` | Archived endpoint (always `410`) | [docs/rest-v1/stats.md](rest-v1/stats.md) |
 | `/checkpoints/:asset` | Hash-chain checkpoints | [docs/integrity.md](integrity.md) |
 | `/checkpoints/:asset/latest` | Latest checkpoint per chain | [docs/integrity.md](integrity.md) |
 | `/verify/replay/:asset` | Replay verification helper | [docs/integrity.md](integrity.md) |
@@ -57,10 +64,10 @@ curl -H "apikey: sb_publishable_..." \
 
 | Parameter | Description | Default | Max |
 |---|---|---|---|
-| `limit` | Items per page | `100` | `1000` |
+| `limit` | Items per page | `100` | `1000` (`/metadata` max is `100`) |
 | `offset` | Skip N items | `0` | `10000` |
 
-For total count (when supported), send:
+When supported, request total count with:
 
 ```bash
 Prefer: count=exact
@@ -68,15 +75,17 @@ Prefer: count=exact
 
 ## Verification Status Filters
 
+Status values:
+
 - `PENDING` - ingested, waiting verification
 - `FINALIZED` - verified on-chain
 - `ORPHANED` - invalidated by reorg
 
-Common query patterns:
+Behavior:
 
-- `?status=eq.FINALIZED`
-- `?status=eq.PENDING`
-- `?includeOrphaned=true` (to include orphaned rows)
+- Default: orphaned rows are excluded (`status=neq.ORPHANED` behavior)
+- Explicit status filter: `?status=eq.FINALIZED`, `?status=eq.PENDING`, `?status=neq.ORPHANED`
+- Include everything: `?includeOrphaned=true`
 
 ## PostgREST Operators
 
@@ -85,9 +94,21 @@ Common query patterns:
 | `eq` | `?owner=eq.ABC` | Equals |
 | `neq` | `?status=neq.ORPHANED` | Not equals |
 | `in` | `?feedback_index=in.(1,2,3)` | In list |
+| `gt` / `gte` / `lt` / `lte` | `?revocation_id=gte.10` | Numeric bounds (where supported) |
 
-## Migration Recommendation
+## Archived Validation Endpoints
 
-For new integrations, migrate to GraphQL:
+Validation indexing is archived on-chain (`agent-registry-8004` `v0.5.0+`).
 
-- [`../README.md`](../README.md)
+`GET /rest/v1/validations` is intentionally retired and returns `410 Gone`:
+
+```json
+{
+  "error": "Validation endpoints are archived and no longer exposed. /rest/v1/validations has been retired."
+}
+```
+
+## Notes
+
+- REST proxy mode is read-only (`GET`/`HEAD` only).
+- New integrations should prefer GraphQL for long-term compatibility.
