@@ -19,7 +19,6 @@ The 8004 Agent Registry is indexed as a set of Metaplex Core assets under the sa
 |---|---|---|---|
 | Mainnet (production) | `https://8004.qnt.sh/v2/graphql` | `https://8004.qnt.sh/health` | Live |
 | Devnet (reference deployment) | `https://8004-indexer-production.up.railway.app/v2/graphql` | `https://8004-indexer-production.up.railway.app/health` | Live |
-| GraphQL legacy alias | `https://8004-indexer-production.up.railway.app/graphql` | - | Live |
 | Self-hosted | `https://your-indexer.example.com/v2/graphql` | `https://your-indexer.example.com/health` | Custom |
 
 ## Authentication
@@ -43,6 +42,8 @@ Available `Query` operations:
 - `feedbacks(first, skip, after, where, orderBy, orderDirection)`
 - `feedbackResponse(id: ID!)`
 - `feedbackResponses(first, skip, after, where, orderBy, orderDirection)`
+- `revocation(id: ID!)`
+- `revocations(first, skip, after, where, orderBy, orderDirection)`
 - `agentMetadatas(first, skip, where)`
 - `agentStats(id: ID!)`
 - `protocol(id: ID!)`
@@ -66,11 +67,16 @@ Compatibility note:
 
 ## ID Formats
 
-GraphQL IDs are namespaced with the Solana prefix:
+GraphQL IDs use:
 
-- Agent: `sol:<asset_pubkey>`
-- Feedback: `sol:<asset>:<client>:<feedback_index>`
-- Response: `sol:<asset>:<client>:<feedback_index>:<responder>:<tx_signature>`
+- Agent: `<asset_pubkey>`
+- Feedback entity id (`Feedback.id`): `<feedback_id>` (sequential)
+- Response entity id (`FeedbackResponse.id`): `<response_id>` (sequential)
+
+Lookup note:
+- `feedback(id:)` accepts canonical `<asset>:<client>:<feedback_index>` (and sequential `<feedback_id>`).
+- `feedbackResponse(id:)` expects canonical `<asset>:<client>:<feedback_index>:<responder>:<signature_or_count>`.
+- Legacy `sol:<...>` inputs are still accepted for backward compatibility.
 
 ## Quick Start
 
@@ -116,7 +122,7 @@ Response (example):
 {
   "data": {
     "agents": [
-      { "id": "sol:ASSET_PUBKEY", "owner": "OWNER_WALLET", "totalFeedback": "12", "solana": { "assetPubkey": "ASSET_PUBKEY" } }
+      { "id": "ASSET_PUBKEY", "owner": "OWNER_WALLET", "totalFeedback": "12", "solana": { "assetPubkey": "ASSET_PUBKEY" } }
     ]
   }
 }
@@ -140,7 +146,7 @@ curl -X POST "https://8004.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($agent: ID!) { feedbacks(first: 10, where: { agent: $agent }) { id clientAddress isRevoked } }",
-    "variables":{"agent":"sol:FmWeWQYzyt6zoANeqXT8DcNiYAom9ioNh9hXxWr6oxjX"}
+    "variables":{"agent":"FmWeWQYzyt6zoANeqXT8DcNiYAom9ioNh9hXxWr6oxjX"}
   }'
 ```
 
@@ -150,7 +156,7 @@ Response (example):
 {
   "data": {
     "feedbacks": [
-      { "id": "sol:ASSET_PUBKEY:CLIENT_WALLET:0", "clientAddress": "CLIENT_WALLET", "isRevoked": false }
+      { "id": "42", "clientAddress": "CLIENT_WALLET", "isRevoked": false }
     ]
   }
 }
@@ -173,7 +179,7 @@ Response (example):
 {
   "data": {
     "agentSearch": [
-      { "id": "sol:ASSET_PUBKEY", "owner": "OWNER_WALLET", "createdAt": "1700000000", "solana": { "trustTier": 2, "qualityScore": 8400 } }
+      { "id": "ASSET_PUBKEY", "owner": "OWNER_WALLET", "createdAt": "1700000000", "solana": { "trustTier": 2, "qualityScore": 8400 } }
     ]
   }
 }
@@ -186,7 +192,7 @@ curl -X POST "https://8004.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($id: ID!) { agent(id: $id) { id owner registrationFile { name description image active mcpEndpoint mcpTools a2aEndpoint a2aSkills oasfSkills oasfDomains hasOASF } } }",
-    "variables":{"id":"sol:FmWeWQYzyt6zoANeqXT8DcNiYAom9ioNh9hXxWr6oxjX"}
+    "variables":{"id":"FmWeWQYzyt6zoANeqXT8DcNiYAom9ioNh9hXxWr6oxjX"}
   }'
 ```
 
@@ -196,7 +202,7 @@ Response (example):
 {
   "data": {
     "agent": {
-      "id": "sol:ASSET_PUBKEY",
+      "id": "ASSET_PUBKEY",
       "owner": "OWNER_WALLET",
       "registrationFile": {
         "name": "My Agent",
@@ -257,7 +263,7 @@ Response (example):
 
 ## Cursor Pagination
 
-- `after` cursor is supported on `agents`, `feedbacks`, `feedbackResponses`
+- `after` cursor is supported on `agents`, `feedbacks`, `feedbackResponses`, `revocations`
 - Cursor pagination is only valid with `orderBy: createdAt`
 - Do not combine `after` and `skip` in the same query
 - Request the `cursor` field in list queries, and pass it back as `after` to fetch the next page
