@@ -19,7 +19,7 @@ POST /v2/graphql
 All examples below assume:
 
 ```bash
-GRAPHQL_URL="https://8004-indexer-production.up.railway.app/v2/graphql"
+GRAPHQL_URL="https://8004.qnt.sh/v2/graphql"
 ```
 
 ## Collection Queries

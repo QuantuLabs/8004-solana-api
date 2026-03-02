@@ -17,6 +17,7 @@ The 8004 Agent Registry is indexed as a set of Metaplex Core assets under the sa
 
 | Environment | GraphQL Endpoint | Health | Status |
 |---|---|---|---|
+| Mainnet (production) | `https://8004.qnt.sh/v2/graphql` | `https://8004.qnt.sh/health` | Live |
 | Devnet (reference deployment) | `https://8004-indexer-production.up.railway.app/v2/graphql` | `https://8004-indexer-production.up.railway.app/health` | Live |
 | GraphQL legacy alias | `https://8004-indexer-production.up.railway.app/graphql` | - | Live |
 | Self-hosted | `https://your-indexer.example.com/v2/graphql` | `https://your-indexer.example.com/health` | Custom |
@@ -76,7 +77,7 @@ GraphQL IDs are namespaced with the Solana prefix:
 ### Health Check
 
 ```bash
-curl "https://8004-indexer-production.up.railway.app/health"
+curl "https://8004.qnt.sh/health"
 ```
 
 Response (example):
@@ -88,7 +89,7 @@ Response (example):
 ### Basic GraphQL query
 
 ```bash
-curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
+curl -X POST "https://8004.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{"query":"{ __typename }"}'
 ```
@@ -102,7 +103,7 @@ Response (example):
 ### List agents
 
 ```bash
-curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
+curl -X POST "https://8004.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query { agents(first: 5, orderBy: createdAt, orderDirection: desc) { id owner totalFeedback solana { assetPubkey } } }"
@@ -124,7 +125,7 @@ Response (example):
 ### Incremental agent sync (updatedAt window)
 
 ```bash
-curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
+curl -X POST "https://8004.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($from: BigInt!, $to: BigInt!) { agents(first: 100, where: { updatedAt_gt: $from, updatedAt_lt: $to }, orderBy: updatedAt, orderDirection: asc) { id owner totalFeedback updatedAt } }",
@@ -135,7 +136,7 @@ curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
 ### Filter feedbacks for one agent
 
 ```bash
-curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
+curl -X POST "https://8004.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($agent: ID!) { feedbacks(first: 10, where: { agent: $agent }) { id clientAddress isRevoked } }",
@@ -158,7 +159,7 @@ Response (example):
 ### Search agents (name, owner, asset pubkey)
 
 ```bash
-curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
+curl -X POST "https://8004.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($q: String!) { agentSearch(query: $q, first: 10) { id owner createdAt solana { trustTier qualityScore } } }",
@@ -181,7 +182,7 @@ Response (example):
 ### Fetch an agent registration file (service endpoints, skills)
 
 ```bash
-curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
+curl -X POST "https://8004.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($id: ID!) { agent(id: $id) { id owner registrationFile { name description image active mcpEndpoint mcpTools a2aEndpoint a2aSkills oasfSkills oasfDomains hasOASF } } }",
@@ -218,7 +219,7 @@ Response (example):
 ### Global rollups (tags, totals)
 
 ```bash
-curl -X POST "https://8004-indexer-production.up.railway.app/v2/graphql" \
+curl -X POST "https://8004.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query { globalStats { id totalAgents totalFeedback totalCollections tags } }"
@@ -231,7 +232,7 @@ Response (example):
 {
   "data": {
     "globalStats": {
-      "id": "solana-devnet",
+      "id": "global-mainnet",
       "totalAgents": "136",
       "totalFeedback": "420",
       "totalCollections": "1",

@@ -11,7 +11,7 @@ POST /v2/graphql
 All examples below assume:
 
 ```bash
-GRAPHQL_URL="https://8004-indexer-production.up.railway.app/v2/graphql"
+GRAPHQL_URL="https://8004.qnt.sh/v2/graphql"
 ```
 
 ## Queries
@@ -39,7 +39,7 @@ Response (example):
   "data": {
     "protocols": [
       {
-        "id": "solana-devnet",
+        "id": "global-mainnet",
         "totalAgents": "136",
         "totalFeedback": "420",
         "tags": ["tag_a", "tag_b"]
@@ -65,7 +65,7 @@ Response (example):
 {
   "data": {
     "globalStats": {
-      "id": "solana-devnet",
+      "id": "global-mainnet",
       "totalAgents": "136",
       "totalFeedback": "420",
       "totalCollections": "1",
