@@ -21,13 +21,13 @@ query GetCollections($first: Int!, $skip: Int!) {
 
 # Variables example:
 # { "collection": "my-col", "creator": "CREATOR_WALLET" }
-query GetCollectionAssetCount($collection: String!, $creator: String) {
+query GetCollectionAssetCount($collection: String!, $creator: String!) {
   collectionAssetCount(collection: $collection, creator: $creator)
 }
 
 # Variables example:
 # { "collection": "my-col", "creator": "CREATOR_WALLET", "first": 50, "skip": 0 }
-query GetCollectionAssets($collection: String!, $creator: String, $first: Int!, $skip: Int!) {
+query GetCollectionAssets($collection: String!, $creator: String!, $first: Int!, $skip: Int!) {
   collectionAssets(
     collection: $collection
     creator: $creator
@@ -48,9 +48,9 @@ query GetCollectionAssets($collection: String!, $creator: String, $first: Int!, 
   }
 }
 
-# parent accepts namespaced ID (sol:<asset>) or raw asset pubkey
+# parent accepts raw asset pubkey (legacy sol:<asset> also accepted)
 # Variables example:
-# { "parent": "sol:PARENT_ASSET_PUBKEY" }
+# { "parent": "PARENT_ASSET_PUBKEY" }
 query GetAgentChildren($parent: ID!) {
   agentChildren(parent: $parent, first: 100, skip: 0) {
     id
@@ -62,7 +62,7 @@ query GetAgentChildren($parent: ID!) {
 }
 
 # Variables example:
-# { "asset": "sol:CHILD_ASSET_PUBKEY" }
+# { "asset": "CHILD_ASSET_PUBKEY" }
 query GetAgentLineage($asset: ID!) {
   agentLineage(asset: $asset, includeSelf: true, first: 100, skip: 0) {
     id
@@ -73,7 +73,7 @@ query GetAgentLineage($asset: ID!) {
 }
 
 # Variables example:
-# { "root": "sol:ROOT_ASSET_PUBKEY" }
+# { "root": "ROOT_ASSET_PUBKEY" }
 query GetAgentTree($root: ID!) {
   agentTree(root: $root, maxDepth: 5, includeRoot: true, first: 200, skip: 0) {
     depth

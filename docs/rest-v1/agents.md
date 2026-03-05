@@ -23,7 +23,7 @@ GET /rest/v1/agents
 | `owner` | string | Current owner wallet |
 | `creator` | string | Creator wallet |
 | `collection` | string | Collection label on agent |
-| `canonical_col` / `collection_pointer` | string | Canonical collection pointer (`c1:<cid>`) |
+| `canonical_col` / `collection_pointer` | string | Canonical collection pointer (`c1:<cid>`). Local API mode accepts both aliases; REST proxy/PostgREST typically expects `canonical_col` |
 | `agent_wallet` | string | Agent wallet |
 | `parent_asset` | string | Parent asset pubkey |
 | `parent_creator` | string | Parent creator wallet |
@@ -40,8 +40,13 @@ GET /rest/v1/agents
 Notes:
 - The API accepts PostgREST-style values (`eq.VALUE`) and raw values (`VALUE`).
 - Invalid `agent_id` or timestamp filters return `400`.
+- For best REST proxy compatibility, prefer `canonical_col`; `collection_pointer` is kept as local alias.
+- CIDv1 compatibility: `canonical_col=eq.<bare_cid>` and `canonical_col=eq.c1:<cid>` are normalized to match legacy rows stored as either `c1:<cid>` or bare CID.
 
 ## Response Schema (`/agents`)
+
+Schema below describes local API mode mapping.
+In REST proxy mode, `/agents` returns upstream PostgREST rows (for example with `canonical_col`, `block_slot`, `tx_index`, `event_ordinal`).
 
 ```typescript
 interface Agent {
@@ -81,11 +86,13 @@ interface Agent {
 curl -sS "$BASE_URL/agents?limit=50&offset=0"
 ```
 
-### Filter by canonical collection scope (`creator + collection_pointer`)
+### Filter by canonical collection scope (same minting creator + same collection pointer)
 
 ```bash
-curl -sS "$BASE_URL/agents?creator=eq.CREATOR_WALLET&collection_pointer=eq.c1:CID&status=neq.ORPHANED&limit=50"
+curl -sS "$BASE_URL/agents?creator=eq.CREATOR_WALLET&canonical_col=eq.c1:CID&status=neq.ORPHANED&limit=50"
 ```
+
+`collection_pointer=eq.c1:CID` remains accepted in local API mode.
 
 ### Incremental sync by update time
 
@@ -98,6 +105,8 @@ curl -sS "$BASE_URL/agents?updated_at_gt=1770500000&updated_at_lt=1770600000&lim
 ```http
 GET /rest/v1/agents/children
 ```
+
+`/agents/children` is implemented as a local handler. In REST proxy mode it is not guaranteed and can return `403`.
 
 ### Query Parameters
 
@@ -120,6 +129,8 @@ curl -sS "$BASE_URL/agents/children?parent_asset=eq.PARENT_ASSET_PUBKEY&status=n
 ```http
 GET /rest/v1/agents/tree
 ```
+
+`/agents/tree` is implemented as a local handler. In REST proxy mode it is not guaranteed and can return `403`.
 
 ### Query Parameters
 
@@ -154,6 +165,8 @@ interface AgentTreeRow extends Agent {
 GET /rest/v1/agents/lineage
 ```
 
+`/agents/lineage` is implemented as a local handler. In REST proxy mode it is not guaranteed and can return `403`.
+
 ### Query Parameters
 
 | Parameter | Type | Description |
@@ -177,13 +190,16 @@ curl -sS "$BASE_URL/agents/lineage?asset=eq.CHILD_ASSET_PUBKEY&include_self=true
 GET /rest/v1/collections
 ```
 
+`/collections` is available in local API mode. In REST proxy mode the call is upstream-dependent and can differ in availability/shape from local mapping.
+
 ### Query Parameters
 
 | Parameter | Type | Description |
 |---|---|---|
+| `collection_id` | string | Sequential collection ID filter (`eq`, `gt`, `gte`, `lt`, `lte`) |
 | `collection` | string | Canonical collection id |
 | `creator` | string | Creator wallet |
-| `first_seen_asset` | string | First asset seen for this collection scope |
+| `first_seen_asset` | string | First asset seen for this collection scope (same minting creator + same collection pointer) |
 | `limit` | number | Page size |
 | `offset` | number | Offset |
 
@@ -191,6 +207,7 @@ GET /rest/v1/collections
 
 ```typescript
 interface Collection {
+  collection_id: string | null;
   collection: string;
   creator: string;
   first_seen_asset: string;
@@ -223,6 +240,12 @@ interface Collection {
 curl -sS "$BASE_URL/collections?creator=eq.CREATOR_WALLET&limit=100"
 ```
 
+### Example (lookup by sequential `collection_id`)
+
+```bash
+curl -sS "$BASE_URL/collections?collection_id=eq.7&limit=1"
+```
+
 ## Collection Asset Count
 
 ```http
@@ -234,7 +257,7 @@ GET /rest/v1/collection_asset_count
 | Parameter | Type | Description |
 |---|---|---|
 | `collection` | string | Canonical collection pointer (required) |
-| `creator` | string | Optional creator filter |
+| `creator` | string | Creator filter (required; scope is creator+collection) |
 | `status` | string | `eq.<STATUS>` or `neq.<STATUS>` |
 | `includeOrphaned` | boolean | Include orphaned rows |
 
@@ -265,7 +288,7 @@ GET /rest/v1/collection_assets
 | Parameter | Type | Description |
 |---|---|---|
 | `collection` | string | Canonical collection pointer (required) |
-| `creator` | string | Optional creator filter |
+| `creator` | string | Creator filter (required; scope is creator+collection) |
 | `status` | string | `eq.<STATUS>` or `neq.<STATUS>` |
 | `includeOrphaned` | boolean | Include orphaned rows |
 | `limit` | number | Page size (default `100`, max `1000`) |
@@ -280,5 +303,5 @@ curl -sS "$BASE_URL/collection_assets?collection=eq.c1:CID&creator=eq.CREATOR_WA
 ### Count Header (optional)
 
 ```bash
-curl -sS -H "Prefer: count=exact" "$BASE_URL/collection_assets?collection=eq.c1:CID&limit=10&offset=0"
+curl -sS -H "Prefer: count=exact" "$BASE_URL/collection_assets?collection=eq.c1:CID&creator=eq.CREATOR_WALLET&limit=10&offset=0"
 ```
