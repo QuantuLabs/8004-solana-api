@@ -11,24 +11,23 @@ POST /v2/graphql
 All examples below assume:
 
 ```bash
-GRAPHQL_URL="https://8004.qnt.sh/v2/graphql"
+GRAPHQL_URL="https://8004-api.qnt.sh/v2/graphql"
 ```
 
 ## IDs
 
-GraphQL exposes multiple agent identifiers:
+GraphQL exposes:
 
-- `id` (opaque string): `sol:<asset_pubkey>` (entity reference id)
-- `agentId` (deterministic numeric id): first 8 bytes of asset pubkey (big-endian)
-- `agentid` (registry sequence id): DB-backed `global_id` (`uint64` semantic, nullable)
-- `agentidFormatted` (display id): UI-friendly formatting of `agentid` (example: `#042`)
+- `id` (opaque string): `<asset_pubkey>` (entity reference id)
+- `agentId` (sequential registration id): DB-backed `agents.agent_id` (`BigInt`)
 
 Notes:
 
-- `Agent.id` is always namespaced with `sol:`.
+- `Agent.id` is the raw Solana asset pubkey string.
 - The raw Solana pubkey is available at `agent.solana.assetPubkey`.
-- `agentId` and `agentid` are serialized as strings in JSON/GraphQL responses to avoid precision loss in JavaScript number parsing.
-- There is no `globalId` field name in the public API; use `agentid`.
+- `agentId` is serialized as a string in JSON/GraphQL responses to avoid precision loss in JavaScript number parsing.
+- In `AgentFilter`, `agentid` is supported as a legacy input alias for `agentId`.
+- GraphQL outputs use `agentId` and do not expose `agentid`.
 
 ## Queries
 
@@ -58,12 +57,12 @@ The `agents(where: AgentFilter)` input supports:
 - `creator`
 - `agentWallet`
 - `collection` (raw Metaplex collection)
-- `collectionPointer` (canonical collection id)
+- `collectionPointer` (canonical collection pointer stored on the agent)
 - `parentAsset`, `parentCreator`
 - `colLocked`, `parentLocked`
 - `atomEnabled`
 - `trustTier_gte`
-- `agentid`, `agentid_gt`, `agentid_lt`, `agentid_gte`, `agentid_lte`
+- `agentId` (legacy input alias `agentid` is also accepted)
 - `totalFeedback_gt`, `totalFeedback_gte`
 - `createdAt_gt`, `createdAt_lt` (unix seconds)
 - `updatedAt_gt`, `updatedAt_lt` (unix seconds)
@@ -74,7 +73,6 @@ Use `orderBy: AgentOrderBy`:
 
 - `createdAt` (default)
 - `updatedAt`
-- `agentid`
 - `totalFeedback`
 - `qualityScore`
 - `trustTier`
@@ -99,7 +97,7 @@ Response (example):
   "data": {
     "agents": [
       {
-        "id": "sol:ASSET_PUBKEY",
+        "id": "ASSET_PUBKEY",
         "owner": "OWNER_WALLET",
         "createdAt": "1700000000",
         "totalFeedback": "12",
@@ -116,8 +114,8 @@ Response (example):
 curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query($id: ID!) { agent(id: $id) { id agentId agentid agentidFormatted owner creator agentURI agentWallet collectionPointer colLocked parentAsset parentCreator parentLocked createdAt updatedAt totalFeedback solana { assetPubkey collection atomEnabled trustTier qualityScore confidence riskScore diversityRatio verificationStatus feedbackDigest responseDigest revokeDigest } } }",
-    "variables": { "id": "sol:ASSET_PUBKEY" }
+    "query":"query($id: ID!) { agent(id: $id) { id agentId owner creator agentURI agentWallet collectionPointer colLocked parentAsset parentCreator parentLocked createdAt updatedAt totalFeedback solana { assetPubkey collection atomEnabled trustTier qualityScore confidence riskScore diversityRatio verificationStatus feedbackDigest responseDigest revokeDigest } } }",
+    "variables": { "id": "ASSET_PUBKEY" }
   }'
 ```
 
@@ -127,10 +125,8 @@ Response (example):
 {
   "data": {
     "agent": {
-      "id": "sol:ASSET_PUBKEY",
-      "agentId": "7281947362187361450",
-      "agentid": "42",
-      "agentidFormatted": "#042",
+      "id": "ASSET_PUBKEY",
+      "agentId": "42",
       "owner": "OWNER_WALLET",
       "creator": "CREATOR_WALLET",
       "agentURI": "https://example.com/agent.json",
@@ -153,9 +149,9 @@ Response (example):
         "riskScore": 15,
         "diversityRatio": 40,
         "verificationStatus": "FINALIZED",
-        "feedbackDigest": "0x...",
-        "responseDigest": "0x...",
-        "revokeDigest": "0x..."
+        "feedbackDigest": "ab12cd34...",
+        "responseDigest": "cd34ef56...",
+        "revokeDigest": "ef56ab78..."
       }
     }
   }
@@ -169,7 +165,7 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($id: ID!) { agent(id: $id) { id owner agentURI registrationFile { name description image active mcpEndpoint mcpTools a2aEndpoint a2aSkills oasfSkills oasfDomains hasOASF } } }",
-    "variables": { "id": "sol:ASSET_PUBKEY" }
+    "variables": { "id": "ASSET_PUBKEY" }
   }'
 ```
 
@@ -179,7 +175,7 @@ Response (example):
 {
   "data": {
     "agent": {
-      "id": "sol:ASSET_PUBKEY",
+      "id": "ASSET_PUBKEY",
       "owner": "OWNER_WALLET",
       "agentURI": "https://example.com/agent.json",
       "registrationFile": {
@@ -250,7 +246,7 @@ Response (example):
 {
   "data": {
     "agents": [
-      { "id": "sol:ASSET_PUBKEY", "owner": "OWNER_WALLET", "createdAt": "1700000000" }
+      { "id": "ASSET_PUBKEY", "owner": "OWNER_WALLET", "createdAt": "1700000000" }
     ]
   }
 }
@@ -267,7 +263,7 @@ curl -sS "$GRAPHQL_URL" \
   }'
 ```
 
-### Agents by canonical collection and creator
+### Agents by unique collection scope (same minting creator + same collection pointer)
 
 ```bash
 curl -sS "$GRAPHQL_URL" \

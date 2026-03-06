@@ -11,7 +11,7 @@ POST /v2/graphql
 All examples below assume:
 
 ```bash
-GRAPHQL_URL="https://8004.qnt.sh/v2/graphql"
+GRAPHQL_URL="https://8004-api.qnt.sh/v2/graphql"
 ```
 
 ## Examples
@@ -33,7 +33,7 @@ Response (example):
   "data": {
     "agents": [
       {
-        "id": "sol:ASSET_PUBKEY",
+        "id": "ASSET_PUBKEY",
         "owner": "OWNER_WALLET",
         "totalFeedback": "12",
         "solana": {
@@ -66,7 +66,7 @@ Response (example):
   "data": {
     "agents": [
       {
-        "id": "sol:ASSET_PUBKEY",
+        "id": "ASSET_PUBKEY",
         "owner": "OWNER_WALLET",
         "totalFeedback": "42",
         "solana": { "trustTier": 3, "qualityScore": 9100 }
@@ -76,7 +76,7 @@ Response (example):
 }
 ```
 
-### Top agents filtered by collection scope (`collection` + `creator`)
+### Top agents filtered by collection scope (same minting creator + same collection pointer)
 
 ```bash
 curl -sS "$GRAPHQL_URL" \
@@ -94,7 +94,7 @@ Response (example):
   "data": {
     "agents": [
       {
-        "id": "sol:ASSET_PUBKEY",
+        "id": "ASSET_PUBKEY",
         "owner": "OWNER_WALLET",
         "creator": "CREATOR_WALLET",
         "collectionPointer": "my-col",

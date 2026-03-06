@@ -21,8 +21,7 @@ GET /rest/v1/feedbacks
 | `asset` | string | Filter by agent asset pubkey |
 | `client_address` | string | Filter by client wallet |
 | `feedback_id` | string | Sequential feedback ID (`eq.<n>` or raw integer) |
-| `feedback_index` | string | Feedback index (`eq.<n>` or raw integer) |
-| `feedback_index` | `in.(1,2,3)` | Multiple feedback indices |
+| `feedback_index` | string | Feedback index filter (`eq.<n>`, raw integer, or `in.(1,2,3)`) |
 | `is_revoked` | boolean | Filter revoked/active feedbacks |
 | `tag1` | string | Filter by primary tag |
 | `tag2` | string | Filter by secondary tag |
@@ -37,10 +36,14 @@ GET /rest/v1/feedbacks
 | `offset` | number | Pagination offset (max `10000`) |
 
 Notes:
-- Invalid `feedback_id`, `feedback_index`, or timestamp filters return `400`.
+- Invalid `feedback_id` or timestamp filters return `400`.
+- Invalid `feedback_index` values return `400`.
 - `feedback_id` without `asset` can be ambiguous and may return `400`.
 
 ## Response Schema
+
+Schema below describes local API mode mapping.
+In REST proxy mode, `/feedbacks` can return upstream PostgREST columns/types.
 
 ```typescript
 interface Feedback {

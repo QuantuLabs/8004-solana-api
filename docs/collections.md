@@ -3,12 +3,15 @@
 8004 exposes both raw Metaplex collection info and canonical on-chain grouping fields:
 
 - `collection`: raw Metaplex collection pubkey (`agent.solana.collection`)
-- `collectionPointer`: canonical collection id on the agent
+- `collectionPointer`: canonical collection pointer stored on the agent
+- `collectionId`: canonical sequential collection ID emitted by the indexer
 - `creator`: creator wallet associated with the agent
 - `colLocked`: whether `collectionPointer` is locked
 - `parentAsset`: parent asset pubkey (for hierarchy)
 - `parentCreator`: creator wallet of parent relation
 - `parentLocked`: whether parent relation is locked
+
+A unique canonical collection is the pair `creator + collectionPointer`.
 
 ## Endpoint
 
@@ -19,7 +22,7 @@ POST /v2/graphql
 All examples below assume:
 
 ```bash
-GRAPHQL_URL="https://8004.qnt.sh/v2/graphql"
+GRAPHQL_URL="https://8004-api.qnt.sh/v2/graphql"
 ```
 
 ## Collection Queries
@@ -30,39 +33,48 @@ GRAPHQL_URL="https://8004.qnt.sh/v2/graphql"
 curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query($first: Int!, $skip: Int!) { collections(first: $first, skip: $skip) { collection creator firstSeenAsset firstSeenAt firstSeenSlot assetCount } }",
+    "query":"query($first: Int!, $skip: Int!) { collections(first: $first, skip: $skip) { collectionId collection creator firstSeenAsset firstSeenAt firstSeenSlot assetCount } }",
     "variables": { "first": 20, "skip": 0 }
   }'
 ```
 
-### Count assets for one collection scope
+### Lookup one canonical collection by sequential `collectionId`
 
 ```bash
 curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query($collection: String!, $creator: String) { collectionAssetCount(collection: $collection, creator: $creator) }",
+    "query":"query($collectionId: BigInt!) { collections(first: 1, skip: 0, collectionId: $collectionId) { collectionId collection creator firstSeenAsset firstSeenAt assetCount } }",
+    "variables": { "collectionId": "7" }
+  }'
+```
+
+### Count assets for one unique collection scope (same minting creator + same collection pointer)
+
+```bash
+curl -sS "$GRAPHQL_URL" \
+  -H "content-type: application/json" \
+  --data '{
+    "query":"query($collection: String!, $creator: String!) { collectionAssetCount(collection: $collection, creator: $creator) }",
     "variables": { "collection": "my-col", "creator": "CREATOR_WALLET" }
   }'
 ```
 
-### List assets in one collection scope (paginated)
+### List assets in one unique collection scope (same minting creator + same collection pointer) (paginated)
 
 ```bash
 curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
-    "query":"query($collection: String!, $creator: String, $first: Int!, $skip: Int!) { collectionAssets(collection: $collection, creator: $creator, first: $first, skip: $skip, orderBy: createdAt, orderDirection: desc) { id owner creator collectionPointer colLocked parentAsset parentCreator parentLocked createdAt } }",
+    "query":"query($collection: String!, $creator: String!, $first: Int!, $skip: Int!) { collectionAssets(collection: $collection, creator: $creator, first: $first, skip: $skip, orderBy: createdAt, orderDirection: desc) { id owner creator collectionPointer colLocked parentAsset parentCreator parentLocked createdAt } }",
     "variables": { "collection": "my-col", "creator": "CREATOR_WALLET", "first": 50, "skip": 0 }
   }'
 ```
 
 ## Parent-Child Queries
 
-`parent`, `root`, and `asset` arguments accept:
-
-- namespaced IDs: `sol:<asset_pubkey>`
-- raw asset pubkeys
+`parent`, `root`, and `asset` arguments accept raw asset pubkeys (`<asset_pubkey>`).
+Compatibility note: legacy `sol:<asset_pubkey>` inputs are also accepted.
 
 ### Direct children
 
@@ -71,7 +83,7 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($parent: ID!) { agentChildren(parent: $parent, first: 50, skip: 0) { id owner parentAsset parentCreator parentLocked } }",
-    "variables": { "parent": "sol:PARENT_ASSET_PUBKEY" }
+    "variables": { "parent": "PARENT_ASSET_PUBKEY" }
   }'
 ```
 
@@ -82,7 +94,7 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($asset: ID!) { agentLineage(asset: $asset, includeSelf: true, first: 50, skip: 0) { id parentAsset creator } }",
-    "variables": { "asset": "sol:CHILD_ASSET_PUBKEY" }
+    "variables": { "asset": "CHILD_ASSET_PUBKEY" }
   }'
 ```
 
@@ -93,20 +105,25 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($root: ID!) { agentTree(root: $root, maxDepth: 5, includeRoot: true, first: 200, skip: 0) { depth path parentAsset agent { id owner creator collectionPointer parentAsset } } }",
-    "variables": { "root": "sol:ROOT_ASSET_PUBKEY" }
+    "variables": { "root": "ROOT_ASSET_PUBKEY" }
   }'
 ```
 
 ## REST Equivalents
 
-When REST is enabled (`API_MODE=hybrid`):
+When REST is enabled (`API_MODE=rest` or `API_MODE=both`):
 
 - `GET /rest/v1/collections`
+- `GET /rest/v1/collections?collection_id=eq.<id>`
 - `GET /rest/v1/collection_asset_count?collection=eq.<collection>&creator=eq.<creator>`
 - `GET /rest/v1/collection_assets?collection=eq.<collection>&creator=eq.<creator>&limit=100&offset=0`
 - `GET /rest/v1/agents/children?parent_asset=eq.<asset>`
 - `GET /rest/v1/agents/tree?root_asset=eq.<asset>&max_depth=5`
 - `GET /rest/v1/agents/lineage?asset=eq.<asset>`
+
+Compatibility note:
+- `collection`, `collectionAssetCount`, and `collectionAssets` accept canonical `c1:<cid>` and bare CIDv1 inputs.
+- CIDv1 filters are normalized for read compatibility and match legacy rows stored with either form.
 
 ## Collection Document Digestion Policy
 

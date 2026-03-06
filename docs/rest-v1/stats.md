@@ -8,13 +8,16 @@ All examples below assume:
 BASE_URL="https://your-indexer.example.com/rest/v1"
 ```
 
+Unless noted otherwise, schemas/examples below describe local API mode.
+In REST proxy mode, upstream PostgREST views can expose a different aggregate shape.
+
 ## Endpoints
 
 | Endpoint | Description |
 |---|---|
 | `/rest/v1/stats` | Global stats (alias of `/global_stats`) |
 | `/rest/v1/global_stats` | Global stats |
-| `/rest/v1/collection_stats` | Collection-level aggregates |
+| `/rest/v1/collection_stats` | Registry/raw-collection aggregates |
 | `/rest/v1/stats/verification` | Verification status counts by dataset |
 | `/rest/v1/validations` | Archived endpoint (always `410`) |
 
@@ -41,7 +44,7 @@ interface GlobalStats {
 }
 ```
 
-`total_collections` corresponds to GraphQL `globalStats.totalCollections`.
+`total_collections` corresponds to GraphQL `globalStats.totalCollections` and counts canonical collection scopes (`creator + collection_pointer`), not registries or raw Metaplex collection pubkeys.
 
 ### Example
 
@@ -61,17 +64,23 @@ curl -sS "$BASE_URL/global_stats"
 ]
 ```
 
-## Collection Stats
+## Collection Stats (legacy registry/raw collection view)
 
 ```http
 GET /rest/v1/collection_stats
 ```
 
+This endpoint remains registry/raw-collection-centric. For canonical collection reads keyed by `creator + collection_pointer`, use:
+
+- `GET /rest/v1/collections`
+- `GET /rest/v1/collection_asset_count?collection=eq.<collection_pointer>&creator=eq.<creator>`
+- `GET /rest/v1/collection_assets?collection=eq.<collection_pointer>&creator=eq.<creator>`
+
 ### Query Parameters
 
 | Parameter | Type | Description |
 |---|---|---|
-| `collection` | string | Optional collection pubkey filter |
+| `collection` | string | Optional raw collection pubkey filter |
 | `order` | string | `agent_count.desc` to sort by size |
 | `includeOrphaned` | boolean | Include orphaned rows |
 

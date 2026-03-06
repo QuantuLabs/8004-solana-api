@@ -11,7 +11,7 @@ POST /v2/graphql
 All examples below assume:
 
 ```bash
-GRAPHQL_URL="https://8004.qnt.sh/v2/graphql"
+GRAPHQL_URL="https://8004-api.qnt.sh/v2/graphql"
 ```
 
 ## Concepts
@@ -40,7 +40,7 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($agent: ID!) { hashChainHeads(agent: $agent) { feedback { digest count } response { digest count } revoke { digest count } } }",
-    "variables": { "agent": "sol:ASSET_PUBKEY" }
+    "variables": { "agent": "ASSET_PUBKEY" }
   }'
 ```
 
@@ -65,7 +65,7 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($agent: ID!, $from: BigInt!, $to: BigInt!) { hashChainReplayData(agent: $agent, chainType: FEEDBACK, fromCount: $from, toCount: $to, first: 1000) { hasMore nextFromCount events { client feedbackIndex slot runningDigest feedbackHash } } }",
-    "variables": { "agent": "sol:ASSET_PUBKEY", "from": "0", "to": "1000" }
+    "variables": { "agent": "ASSET_PUBKEY", "from": "0", "to": "1000" }
   }'
 ```
 
@@ -98,7 +98,7 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($agent: ID!) { hashChainLatestCheckpoints(agent: $agent) { feedback { eventCount digest createdAt } response { eventCount digest createdAt } revoke { eventCount digest createdAt } } }",
-    "variables": { "agent": "sol:ASSET_PUBKEY" }
+    "variables": { "agent": "ASSET_PUBKEY" }
   }'
 ```
 

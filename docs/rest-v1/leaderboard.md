@@ -46,3 +46,5 @@ curl -sS "$BASE_URL/leaderboard?includeOrphaned=true&limit=20"
 
 - Ranking order: `trust_score DESC`, then `feedback_count DESC`.
 - Only agents with at least one scored non-revoked feedback appear.
+- In local API mode, leaderboard rows are computed by indexer aggregation/cache.
+- In REST proxy mode, `/leaderboard` depends on upstream exposure and may differ from local behavior/shape.

@@ -11,13 +11,16 @@ POST /v2/graphql
 All examples below assume:
 
 ```bash
-GRAPHQL_URL="https://8004.qnt.sh/v2/graphql"
+GRAPHQL_URL="https://8004-api.qnt.sh/v2/graphql"
 ```
 
 ## IDs
 
-- Agent: `sol:<asset_pubkey>`
-- Feedback: `sol:<asset>:<client>:<feedback_index>`
+- Agent: `<asset_pubkey>`
+- Feedback entity id (`Feedback.id`): `<feedback_id>` (sequential)
+
+Lookup note:
+- `feedback(id:)` accepts canonical `<asset>:<client>:<feedback_index>` (and sequential `<feedback_id>`).
 
 ## Queries
 
@@ -29,11 +32,21 @@ GRAPHQL_URL="https://8004.qnt.sh/v2/graphql"
 The `feedbacks(where: FeedbackFilter)` input supports:
 
 - `agent` (Agent ID)
+- `feedbackId`, `feedbackId_gt`, `feedbackId_gte`, `feedbackId_lt`, `feedbackId_lte`
 - `clientAddress`
 - `tag1`, `tag2`
 - `endpoint`
 - `isRevoked`
 - `createdAt_gt`, `createdAt_lt` (unix seconds)
+
+## Ordering
+
+Use `orderBy: FeedbackOrderBy`:
+
+- `createdAt` (default)
+- `feedbackId`
+- `value`
+- `feedbackIndex`
 
 ## Examples
 
@@ -44,7 +57,7 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($agent: ID!) { feedbacks(first: 20, where: { agent: $agent }, orderBy: createdAt, orderDirection: desc) { id clientAddress feedbackIndex value isRevoked createdAt solana { score valueRaw valueDecimals txSignature blockSlot runningDigest verificationStatus } } }",
-    "variables": { "agent": "sol:ASSET_PUBKEY" }
+    "variables": { "agent": "ASSET_PUBKEY" }
   }'
 ```
 
@@ -55,7 +68,7 @@ Response (example):
   "data": {
     "feedbacks": [
       {
-        "id": "sol:ASSET_PUBKEY:CLIENT_WALLET:0",
+        "id": "42",
         "clientAddress": "CLIENT_WALLET",
         "feedbackIndex": "0",
         "value": "95.00",
@@ -67,7 +80,7 @@ Response (example):
           "valueDecimals": 2,
           "txSignature": "TX_SIGNATURE",
           "blockSlot": "123456",
-          "runningDigest": "0x...",
+          "runningDigest": "ab12cd34...",
           "verificationStatus": "FINALIZED"
         }
       }
@@ -94,8 +107,8 @@ Response (example):
   "data": {
     "feedbacks": [
       {
-        "id": "sol:ASSET_PUBKEY:CLIENT_WALLET:0",
-        "agent": { "id": "sol:ASSET_PUBKEY" },
+        "id": "42",
+        "agent": { "id": "ASSET_PUBKEY" },
         "clientAddress": "CLIENT_WALLET",
         "tag1": "tag_a",
         "tag2": "tag_b",
@@ -113,7 +126,7 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($id: ID!) { feedback(id: $id) { id agent { id } clientAddress feedbackIndex value tag1 tag2 endpoint feedbackURI feedbackHash isRevoked createdAt revokedAt responses(first: 10) { id responder responseUri createdAt } solana { score txSignature blockSlot runningDigest } } }",
-    "variables": { "id": "sol:ASSET:CLIENT:0" }
+    "variables": { "id": "ASSET:CLIENT:0" }
   }'
 ```
 
@@ -123,8 +136,8 @@ Response (example):
 {
   "data": {
     "feedback": {
-      "id": "sol:ASSET_PUBKEY:CLIENT_WALLET:0",
-      "agent": { "id": "sol:ASSET_PUBKEY" },
+      "id": "42",
+      "agent": { "id": "ASSET_PUBKEY" },
       "clientAddress": "CLIENT_WALLET",
       "feedbackIndex": "0",
       "value": "95.00",
@@ -132,14 +145,14 @@ Response (example):
       "tag2": "tag_b",
       "endpoint": "https://example.com/api",
       "feedbackURI": "ipfs://bafy...",
-      "feedbackHash": "0x...",
+      "feedbackHash": "cd34ef56...",
       "isRevoked": false,
       "createdAt": "1700000000",
       "revokedAt": null,
       "responses": [
-        { "id": "sol:ASSET_PUBKEY:CLIENT_WALLET:0:RESPONDER_WALLET:TX", "responder": "RESPONDER_WALLET", "responseUri": "ipfs://bafy...", "createdAt": "1700000001" }
+        { "id": "7", "responder": "RESPONDER_WALLET", "responseUri": "ipfs://bafy...", "createdAt": "1700000001" }
       ],
-      "solana": { "score": 85, "txSignature": "TX_SIGNATURE", "blockSlot": "123456", "runningDigest": "0x..." }
+      "solana": { "score": 85, "txSignature": "TX_SIGNATURE", "blockSlot": "123456", "runningDigest": "ef56ab78..." }
     }
   }
 }

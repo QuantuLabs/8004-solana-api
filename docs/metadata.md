@@ -13,7 +13,7 @@ POST /v2/graphql
 All examples below assume:
 
 ```bash
-GRAPHQL_URL="https://8004.qnt.sh/v2/graphql"
+GRAPHQL_URL="https://8004-api.qnt.sh/v2/graphql"
 ```
 
 ## Queries
@@ -37,7 +37,7 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($id: ID!) { agent(id: $id) { id metadata { key value updatedAt } } }",
-    "variables": { "id": "sol:ASSET_PUBKEY" }
+    "variables": { "id": "ASSET_PUBKEY" }
   }'
 ```
 
@@ -47,7 +47,7 @@ Response (example):
 {
   "data": {
     "agent": {
-      "id": "sol:ASSET_PUBKEY",
+      "id": "ASSET_PUBKEY",
       "metadata": [
         { "key": "website", "value": "https://example.com", "updatedAt": "1700000000" },
         { "key": "twitter", "value": "https://x.com/example", "updatedAt": "1700000000" }
@@ -64,7 +64,7 @@ curl -sS "$GRAPHQL_URL" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($agent: ID!, $key: String!) { agentMetadatas(first: 1, where: { agent: $agent, key: $key }) { key value updatedAt } }",
-    "variables": { "agent": "sol:ASSET_PUBKEY", "key": "website" }
+    "variables": { "agent": "ASSET_PUBKEY", "key": "website" }
   }'
 ```
 

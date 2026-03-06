@@ -1,9 +1,9 @@
 # 8004 Solana API
 
-Default public API is **GraphQL**.
+Preferred public API is **GraphQL v2**.
 
 > **REST v1 (PostgREST-compatible)** documentation is available in [`docs/rest-v1.md`](docs/rest-v1.md).
-> GraphQL remains the default for new deployments.
+> GraphQL v2 remains the preferred API for new deployments.
 
 > **Self-hosted**: run your own indexer instance with
 > [8004-solana-indexer](https://github.com/QuantuLabs/8004-solana-indexer).
@@ -17,7 +17,7 @@ The 8004 Agent Registry is indexed as a set of Metaplex Core assets under the sa
 
 | Environment | GraphQL Endpoint | Health | Status |
 |---|---|---|---|
-| Mainnet (production) | `https://8004.qnt.sh/v2/graphql` | `https://8004.qnt.sh/health` | Live |
+| Mainnet (production) | `https://8004-api.qnt.sh/v2/graphql` | `https://8004-api.qnt.sh/health` | Live |
 | Devnet (reference deployment) | `https://8004-indexer-production.up.railway.app/v2/graphql` | `https://8004-indexer-production.up.railway.app/health` | Live |
 | Self-hosted | `https://your-indexer.example.com/v2/graphql` | `https://your-indexer.example.com/health` | Custom |
 
@@ -29,8 +29,12 @@ For self-hosted production, add your own API gateway/auth if needed.
 
 ## Rate Limiting
 
-Reference GraphQL deployment applies request limiting:
-- `30 requests/minute` per IP on GraphQL routes
+Indexer defaults (self-hosted):
+- Global API limiter: `100 requests/minute` per IP
+- GraphQL limiter: `30 requests/minute` per IP on `/v2/graphql`
+- Replay verification limiter (`/rest/v1/verify/replay/:asset`): `1 request/30 seconds` per IP
+
+These defaults are configurable by environment variables for self-hosted deployments (`RATE_LIMIT_MAX_REQUESTS`, `GRAPHQL_RATE_LIMIT_MAX_REQUESTS`).
 
 ## GraphQL Operations
 
@@ -46,15 +50,15 @@ Available `Query` operations:
 - `revocations(first, skip, after, where, orderBy, orderDirection)`
 - `agentMetadatas(first, skip, where)`
 - `agentStats(id: ID!)`
-- `protocol(id: ID!)`
-- `protocols(first, skip)`
+- `protocol(id: ID!)` (deprecated; use `globalStats`)
+- `protocols(first, skip)` (deprecated; use `globalStats`)
 - `globalStats`
 - `agentSearch(query, first)`
 - `agentRegistrationFiles(first, skip, where)`
 - `hashChainHeads(agent: ID!)`
 - `hashChainLatestCheckpoints(agent: ID!)`
 - `hashChainReplayData(agent, chainType, fromCount, toCount, first)`
-- `collections(first, skip, collection, creator)`
+- `collections(first, skip, collectionId, collection, creator)`
 - `collectionAssetCount(collection, creator)`
 - `collectionAssets(collection, creator, first, skip, orderBy, orderDirection)`
 - `agentChildren(parent, first, skip)`
@@ -64,6 +68,10 @@ Available `Query` operations:
 Compatibility note:
 - Validation indexing is archived on-chain (`agent-registry-8004` v0.5.0+).
 - Public API surfaces no longer expose `validation` / `validations`; REST `/rest/v1/validations` returns `410 Gone`.
+
+Collection registry lookup note:
+- GraphQL supports `collections(collectionId: "<sequential_id>")`.
+- REST supports `GET /rest/v1/collections?collection_id=eq.<sequential_id>`.
 
 ## ID Formats
 
@@ -83,7 +91,7 @@ Lookup note:
 ### Health Check
 
 ```bash
-curl "https://8004.qnt.sh/health"
+curl "https://8004-api.qnt.sh/health"
 ```
 
 Response (example):
@@ -95,7 +103,7 @@ Response (example):
 ### Basic GraphQL query
 
 ```bash
-curl -X POST "https://8004.qnt.sh/v2/graphql" \
+curl -X POST "https://8004-api.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{"query":"{ __typename }"}'
 ```
@@ -109,7 +117,7 @@ Response (example):
 ### List agents
 
 ```bash
-curl -X POST "https://8004.qnt.sh/v2/graphql" \
+curl -X POST "https://8004-api.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query { agents(first: 5, orderBy: createdAt, orderDirection: desc) { id owner totalFeedback solana { assetPubkey } } }"
@@ -131,7 +139,7 @@ Response (example):
 ### Incremental agent sync (updatedAt window)
 
 ```bash
-curl -X POST "https://8004.qnt.sh/v2/graphql" \
+curl -X POST "https://8004-api.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($from: BigInt!, $to: BigInt!) { agents(first: 100, where: { updatedAt_gt: $from, updatedAt_lt: $to }, orderBy: updatedAt, orderDirection: asc) { id owner totalFeedback updatedAt } }",
@@ -142,7 +150,7 @@ curl -X POST "https://8004.qnt.sh/v2/graphql" \
 ### Filter feedbacks for one agent
 
 ```bash
-curl -X POST "https://8004.qnt.sh/v2/graphql" \
+curl -X POST "https://8004-api.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($agent: ID!) { feedbacks(first: 10, where: { agent: $agent }) { id clientAddress isRevoked } }",
@@ -165,7 +173,7 @@ Response (example):
 ### Search agents (name, owner, asset pubkey)
 
 ```bash
-curl -X POST "https://8004.qnt.sh/v2/graphql" \
+curl -X POST "https://8004-api.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($q: String!) { agentSearch(query: $q, first: 10) { id owner createdAt solana { trustTier qualityScore } } }",
@@ -188,7 +196,7 @@ Response (example):
 ### Fetch an agent registration file (service endpoints, skills)
 
 ```bash
-curl -X POST "https://8004.qnt.sh/v2/graphql" \
+curl -X POST "https://8004-api.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query($id: ID!) { agent(id: $id) { id owner registrationFile { name description image active mcpEndpoint mcpTools a2aEndpoint a2aSkills oasfSkills oasfDomains hasOASF } } }",
@@ -225,7 +233,7 @@ Response (example):
 ### Global rollups (tags, totals)
 
 ```bash
-curl -X POST "https://8004.qnt.sh/v2/graphql" \
+curl -X POST "https://8004-api.qnt.sh/v2/graphql" \
   -H "content-type: application/json" \
   --data '{
     "query":"query { globalStats { id totalAgents totalFeedback totalCollections tags } }"
@@ -241,12 +249,14 @@ Response (example):
       "id": "global-mainnet",
       "totalAgents": "136",
       "totalFeedback": "420",
-      "totalCollections": "1",
+      "totalCollections": "89",
       "tags": ["tag_a", "tag_b"]
     }
   }
 }
 ```
+
+`totalCollections` counts canonical collection scopes (`creator + collectionPointer`), not raw registries or raw Metaplex collection pubkeys.
 
 ## Docs (GraphQL v2)
 

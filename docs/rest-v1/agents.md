@@ -23,7 +23,7 @@ GET /rest/v1/agents
 | `owner` | string | Current owner wallet |
 | `creator` | string | Creator wallet |
 | `collection` | string | Collection label on agent |
-| `canonical_col` / `collection_pointer` | string | Canonical collection pointer (`c1:<cid>`). Local API mode accepts both aliases; REST proxy/PostgREST typically expects `canonical_col` |
+| `collection_pointer` / `canonical_col` | string | Canonical collection pointer (`c1:<cid>`). `collection_pointer` is the preferred public parameter; `canonical_col` remains accepted as a backward-compatible alias |
 | `agent_wallet` | string | Agent wallet |
 | `parent_asset` | string | Parent asset pubkey |
 | `parent_creator` | string | Parent creator wallet |
@@ -40,8 +40,8 @@ GET /rest/v1/agents
 Notes:
 - The API accepts PostgREST-style values (`eq.VALUE`) and raw values (`VALUE`).
 - Invalid `agent_id` or timestamp filters return `400`.
-- For best REST proxy compatibility, prefer `canonical_col`; `collection_pointer` is kept as local alias.
-- CIDv1 compatibility: `canonical_col=eq.<bare_cid>` and `canonical_col=eq.c1:<cid>` are normalized to match legacy rows stored as either `c1:<cid>` or bare CID.
+- `collection_pointer` is the preferred public filter; `canonical_col` remains accepted for backward compatibility and some upstream PostgREST views.
+- CIDv1 compatibility: `collection_pointer=eq.<bare_cid>` and `collection_pointer=eq.c1:<cid>` are normalized to match legacy rows stored as either `c1:<cid>` or bare CID.
 
 ## Response Schema (`/agents`)
 
@@ -89,10 +89,10 @@ curl -sS "$BASE_URL/agents?limit=50&offset=0"
 ### Filter by canonical collection scope (same minting creator + same collection pointer)
 
 ```bash
-curl -sS "$BASE_URL/agents?creator=eq.CREATOR_WALLET&canonical_col=eq.c1:CID&status=neq.ORPHANED&limit=50"
+curl -sS "$BASE_URL/agents?creator=eq.CREATOR_WALLET&collection_pointer=eq.c1:CID&status=neq.ORPHANED&limit=50"
 ```
 
-`collection_pointer=eq.c1:CID` remains accepted in local API mode.
+`canonical_col=eq.c1:CID` remains accepted as a backward-compatible alias.
 
 ### Incremental sync by update time
 
@@ -197,7 +197,7 @@ GET /rest/v1/collections
 | Parameter | Type | Description |
 |---|---|---|
 | `collection_id` | string | Sequential collection ID filter (`eq`, `gt`, `gte`, `lt`, `lte`) |
-| `collection` | string | Canonical collection id |
+| `collection` | string | Canonical collection pointer |
 | `creator` | string | Creator wallet |
 | `first_seen_asset` | string | First asset seen for this collection scope (same minting creator + same collection pointer) |
 | `limit` | number | Page size |

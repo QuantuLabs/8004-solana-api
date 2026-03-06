@@ -36,7 +36,7 @@ interface MetadataRow {
   id: string;                 // "<asset>:<key>"
   asset: string;
   key: string;
-  value: string;              // decoded bytes, base64-encoded
+  value: string;              // local API mode: decompressed bytes re-encoded as base64
   immutable: boolean;
   status: "PENDING" | "FINALIZED" | "ORPHANED";
   verified_at: string | null;
@@ -59,6 +59,8 @@ If `Prefer: count=exact` is sent, a `Content-Range` header is returned.
 ## Payload Safety
 
 - Values are returned as base64 after storage decompression.
+- In local API mode, the handler decompresses stored bytes then returns `value` as base64.
+- In REST proxy mode, `/metadata` is upstream passthrough and can return raw PostgREST shape/columns.
 - Responses are truncated if aggregate decompressed payload exceeds server safety limits.
 - Keys with `_uri:` prefix are reserved for indexer-derived data.
 

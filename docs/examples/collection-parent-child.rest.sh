@@ -6,7 +6,10 @@ set -euo pipefail
 COLLECTION_POINTER="c1:CID"
 CREATOR="CREATOR_WALLET"
 
-# 1) List canonical collections
+# NOTE: /agents/children, /agents/tree, /agents/lineage are local API mode handlers
+# and may return 403 in strict REST proxy mode.
+
+# 1) List canonical collections (proxy availability/shape depends on upstream)
 curl -sS "$BASE_URL/collections?limit=100&offset=0"
 
 # 2) Count assets in one scope (creator + collection pointer)
@@ -24,6 +27,6 @@ curl -sS "$BASE_URL/agents/tree?root_asset=eq.ROOT_ASSET_PUBKEY&max_depth=5&incl
 # 6) Lineage of one asset
 curl -sS "$BASE_URL/agents/lineage?asset=eq.CHILD_ASSET_PUBKEY&include_self=true&status=neq.ORPHANED&limit=100&offset=0"
 
-# 7) Equivalent /agents filters
+# 7) Equivalent /agents filters (prefer collection_pointer; canonical_col remains accepted as a backward-compatible alias)
 curl -sS "$BASE_URL/agents?creator=eq.${CREATOR}&collection_pointer=eq.${COLLECTION_POINTER}&status=neq.ORPHANED&limit=50"
 curl -sS "$BASE_URL/agents?parent_asset=eq.PARENT_ASSET_PUBKEY&status=neq.ORPHANED&limit=50"

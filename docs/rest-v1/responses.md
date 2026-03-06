@@ -36,6 +36,9 @@ Canonical feedback scope for `response_id`:
 
 ## Response Schema
 
+Schema below describes local API mode mapping.
+In REST proxy mode, `/feedback_responses` and `/responses` can return upstream PostgREST columns/types.
+
 ```typescript
 interface FeedbackResponse {
   id: string | null;
@@ -101,8 +104,7 @@ GET /rest/v1/revocations
 | `client_address` / `client` | string | Filter by client wallet |
 | `feedback_index` | string | Feedback index (`eq.<n>` or raw integer) |
 | `revocation_id` | string | Sequential revocation ID (`eq`, `gt`, `gte`, `lt`, `lte`); requires `asset` |
-| `revoke_count` | string | Integer filter (`eq.<n>` or raw integer) |
-| `revoke_count` | `in.(1,2,3)` | Multiple revoke counts |
+| `revoke_count` | string | Integer filter (`eq.<n>`, raw integer, or `in.(1,2,3)`) |
 | `order` | string | `revoke_count.asc` or `revoke_count.desc` |
 | `status` | string | Status filter (`eq.<STATUS>` or `neq.<STATUS>`) |
 | `includeOrphaned` | boolean | Include orphaned rows |
@@ -110,6 +112,9 @@ GET /rest/v1/revocations
 | `offset` | number | Pagination offset (max `10000`) |
 
 ## Revocation Response Schema
+
+Schema below describes local API mode mapping.
+In REST proxy mode, `/revocations` can return upstream PostgREST columns/types.
 
 ```typescript
 interface Revocation {
@@ -124,8 +129,8 @@ interface Revocation {
   atom_enabled: boolean;
   had_impact: boolean;
   running_digest: string | null;
-  revoke_count: number;
-  tx_signature: string;
+  revoke_count: string;
+  tx_signature: string | null;
   status: "PENDING" | "FINALIZED" | "ORPHANED";
   verified_at: string | null;
   created_at: string;
