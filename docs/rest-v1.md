@@ -8,13 +8,15 @@ If REST proxy is enabled but server credentials are missing (`SUPABASE_KEY` / `P
 
 REST v1 has two execution paths:
 - `local API mode`: native handlers in the indexer (`src/api/server.ts`) with local mapping logic.
-- `REST proxy mode`: read-only passthrough to Supabase/PostgREST (`GET`/`HEAD` only, allowlisted paths).
+- `REST proxy mode`: read-only passthrough to Supabase/PostgREST (`GET`/`HEAD`, plus `POST /rpc/get_leaderboard` for read RPC compatibility, on allowlisted paths).
 - Unless noted otherwise, endpoint schemas/examples in this docs folder describe local API mode.
 - In REST proxy mode, response column names/types can follow upstream PostgREST tables/views.
 
 Proxy caveats:
 - Some local endpoints are not guaranteed in proxy mode (`/agents/children`, `/agents/tree`, `/agents/lineage`, replay/integrity helpers) and can return `403`.
 - Allowlisted paths like `/collections` are still upstream-dependent in proxy mode and may differ from local mapped shape.
+- Public proxy-compatible reputation endpoints are documented in [docs/rest-v1/reputation.md](rest-v1/reputation.md).
+- These proxy-compatibility paths require an indexer deployment that includes the matching proxy allowlist patches; public DNS can lag behind local/self-hosted `API_MODE=both` deployments until updated.
 
 ## Base URL (REST v1)
 
@@ -62,6 +64,9 @@ curl -sS \
 | `/revocations` | List feedback revocation events | [docs/rest-v1/responses.md](rest-v1/responses.md) |
 | `/metadata` | Agent metadata key-value pairs | [docs/rest-v1/metadata.md](rest-v1/metadata.md) |
 | `/leaderboard` | Top agents by trust score | [docs/rest-v1/leaderboard.md](rest-v1/leaderboard.md) |
+| `/agent_reputation` | Reputation summary for one agent (proxy/public compatibility path; requires patched proxy deployment) | [docs/rest-v1/reputation.md](rest-v1/reputation.md) |
+| `/rpc/get_collection_agents` | Collection-scoped reputation rows (proxy/public compatibility path; requires patched proxy deployment) | [docs/rest-v1/reputation.md](rest-v1/reputation.md) |
+| `/rpc/get_leaderboard` | Read RPC leaderboard (`POST`, proxy/public compatibility path; requires patched proxy deployment) | [docs/rest-v1/reputation.md](rest-v1/reputation.md) |
 | `/collections` | Canonical collections (unique by same minting creator + same collection pointer) (proxy behavior depends on upstream exposure) | [docs/rest-v1/agents.md](rest-v1/agents.md) |
 | `/collection_asset_count` | Asset count for one collection scope (same minting creator + same collection pointer) | [docs/rest-v1/agents.md](rest-v1/agents.md) |
 | `/collection_assets` | Paginated assets for one collection scope (same minting creator + same collection pointer) | [docs/rest-v1/agents.md](rest-v1/agents.md) |
@@ -124,6 +129,6 @@ Validation indexing is archived on-chain (`agent-registry-8004` `v0.5.0+`).
 
 ## Notes
 
-- REST proxy mode is read-only (`GET`/`HEAD` only).
+- REST proxy mode is read-only (`GET`/`HEAD`, plus `POST /rpc/get_leaderboard`).
 - `GET /verify/replay/:asset` is throttled to `1` request per `30s` per IP.
 - New integrations should prefer GraphQL for long-term compatibility.
