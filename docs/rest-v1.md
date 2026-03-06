@@ -20,14 +20,17 @@ Proxy caveats:
 
 | Deployment Type | Base URL |
 |---|---|
-| Reference deployment (REST proxy mode; response shape may differ) | `https://8004-indexer-production.up.railway.app/rest/v1` |
+| Mainnet (preferred) | `https://8004-indexer-main.qnt.sh/rest/v1` |
+| Devnet (preferred) | `https://8004-indexer-dev.qnt.sh/rest/v1` |
+| Legacy devnet proxy (may lag behind primary) | `https://8004-indexer-production.up.railway.app/rest/v1` |
+| Legacy mainnet proxy (may lag behind primary) | `https://8004-api.qnt.sh/rest/v1` |
 | Self-hosted indexer | `https://your-indexer.example.com/rest/v1` |
 | Direct Supabase/PostgREST | `https://<project>.supabase.co/rest/v1` or `https://your-postgrest.example.com` |
 
 All examples below assume:
 
 ```bash
-BASE_URL="https://your-indexer.example.com/rest/v1"
+BASE_URL="https://8004-indexer-main.qnt.sh/rest/v1"
 ```
 
 ## Authentication

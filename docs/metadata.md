@@ -13,7 +13,7 @@ POST /v2/graphql
 All examples below assume:
 
 ```bash
-GRAPHQL_URL="https://8004-api.qnt.sh/v2/graphql"
+GRAPHQL_URL="https://8004-indexer-main.qnt.sh/v2/graphql"
 ```
 
 ## Queries
