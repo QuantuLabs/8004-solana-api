@@ -137,9 +137,9 @@ When `INDEX_COLLECTION_METADATA=true`, indexers ingest only these fields from th
 - `description`
 - `image`
 - `banner_image`
-- `social_website`
-- `social_x`
-- `social_discord`
+- `socials.website`
+- `socials.x`
+- `socials.discord`
 
 Collection hierarchy still comes from canonical on-chain data:
 
